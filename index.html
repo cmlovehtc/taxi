@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>地理環境 & 交通法規測驗</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #ffffff;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2, h3 {
+      color: #333;
+      margin-top: 0;
+    }
+    .btn {
+      display: inline-block;
+      padding: 8px 15px;
+      margin: 5px 0;
+      color: #fff;
+      background-color: #1c4966;
+      border-radius: 4px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+    .btn:hover {
+      background-color: #16667a;
+    }
+    .region-row {
+      margin-bottom: 8px;
+    }
+    .question-block {
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .footer {
+      margin-top: 20px;
+      padding: 10px;
+      text-align: center;
+      background: #eef4f9;
+    }
+    .result {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .wrong {
+      color: red;
+    }
+    .correct {
+      color: green;
+    }
+    /* 顯示/隱藏區塊 */
+    .hidden {
+      display: none;
+    }
+    .stats-table {
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    .stats-table th,
+    .stats-table td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+    }
+    .stats-table th {
+      background: #f0f0f0;
+    }
+    .scroll-box {
+      border: 1px solid #ccc;
+      padding: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .download-link {
+      margin-top: 15px;
+      text-align: center;
+    }
+    .download-link a {
+      color: #1c4966;
+      text-decoration: underline;
+    }
+    .download-link a:hover {
+      color: #16667a;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- 首頁容器 (Home) -->
+  <div id="home-container">
+    <h1>地理環境 & 交通法規測驗</h1>
+    <h3>請輸入各縣市的比例 (總和=100)</h3>
+    <div id="region-inputs"></div>
+    <div style="margin-top:10px;">
+      <button class="btn" id="start-traffic">開始交通法規測驗（50題）</button>
+      <button class="btn" id="start-geo">地理位置開始測驗</button>
+      <button class="btn" id="view-bank-menu">查看題庫</button>
+    </div>
+
+    <h3>各縣市題庫數量及統計</h3>
+    <div id="stats-info"></div>
+
+    <div class="footer">
+      郭建隆自動出題程式祝大家考試順利<br>
+      更新日期:2025/1/5日<br>
+      郭建隆版權所有<br>
+      聯絡作者: cmlovehtc@gmail.com<br>
+      LINE: cmlovehtc
+      <div class="download-link">
+        <a href="https://drive.google.com/file/d/1oM8TV_MdPt_x8QJP2OG_OUH92U17YEcL/view?usp=sharing"
+           target="_blank">
+          下載電腦版
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 題庫選單 & 內容容器 (Bank) -->
+  <div id="bank-container" class="hidden">
+    <h2>查看題庫選單</h2>
+    <p>下方列出「各縣市 / 交通法令」的按鈕，可點選「是非題 / 選擇題」查看題目與答案。</p>
+    <div id="bank-menu"></div>
+    <button class="btn" id="back-home-1">返回首頁</button>
+    <hr>
+    <div id="bank-content"></div>
+  </div>
+
+  <!-- 測驗容器 (Quiz) -->
+  <div id="quiz-container" class="hidden">
+    <h3 id="quiz-page-title"></h3>
+    <div id="quiz-nav" style="margin:10px 0;"></div>
+    <div id="quiz-questions"></div>
+  </div>
+
+  <!-- 結果容器 (Result) -->
+  <div id="result-container" class="hidden">
+    <div id="result-area"></div>
+  </div>
+</div>
+
+<script>
+// -------------------------------------
+// 1. 常數、全域變數
+// -------------------------------------
+const REGIONS = ["基隆市","宜蘭縣","新北市","桃園市","臺北市"];
+const QUESTION_TYPES = ["是非題","選擇題"];
+const HOME_CONTAINER  = document.getElementById('home-container');
+const QUIZ_CONTAINER  = document.getElementById('quiz-container');
+const RESULT_CONTAINER= document.getElementById('result-container');
+const BANK_CONTAINER  = document.getElementById('bank-container');
+
+let questions = {};   // questions[region] = { "是非題": [], "選擇題": [] }
+questions["交通法令"] = { "是非題": [], "選擇題": [] };
+
+let proportions  = {};
+let selectedQuestions = { "是非題":[], "選擇題":[] };
+let userAnswers  = {};
+let correctAnswers = {};
+let score = 0;
+let trafficMode = false;    // 是否交通法規測驗
+let currentPage = 0;
+
+// -------------------------------------
+// 2. 動態建立「比例輸入」
+// -------------------------------------
+const regionInputsDiv = document.getElementById('region-inputs');
+REGIONS.forEach(r => {
+  const rowDiv = document.createElement('div');
+  rowDiv.className = 'region-row';
+  rowDiv.innerHTML = `
+    <label>${r}</label>
+    <input type="number" id="prop-${r}" value="0" style="width:60px; margin-left:10px;">
+  `;
+  regionInputsDiv.appendChild(rowDiv);
+});
+
+// -------------------------------------
+// 3. 綁定首頁按鈕事件
+// -------------------------------------
+document.getElementById('start-traffic').addEventListener('click', startTrafficTest);
+document.getElementById('start-geo').addEventListener('click', startGeoTest);
+document.getElementById('view-bank-menu').addEventListener('click', showBankMenu);
+
+// -------------------------------------
+// 4. 初始化載入題庫
+// -------------------------------------
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadAllQuestions();
+  renderStatsInfo();    // 顯示「統計資訊」到首頁
+  renderBankMenu();     // 題庫選單(先準備)
+});
+
+// 讀取各 txt
+async function loadAllQuestions() {
+  REGIONS.forEach(r=>{
+    questions[r] = {"是非題":[],"選擇題":[]};
+  });
+  questions["交通法令"] = {"是非題":[],"選擇題":[]};
+
+  for (const region of [...REGIONS,"交通法令"]) {
+    for (const qtype of QUESTION_TYPES) {
+      let filename;
+      if (region==="交通法令") {
+        filename = `${region}_${qtype}.txt`;
+      } else {
+        filename = `${region}_地理環境_${qtype}.txt`;
+      }
+      try {
+        const res = await fetch(filename);
+        if (!res.ok) {
+          console.log(`無法讀取: ${filename}, 可能無此檔案`);
+          continue;
+        }
+        const text = await res.text();
+        parseTextToQuestions(region, qtype, text);
+      } catch(e) {
+        console.log(`fetch 錯誤: ${filename}`, e);
+      }
+    }
+  }
+}
+
+// 解析 txt => push 進 questions
+function parseTextToQuestions(region, qtype, text) {
+  const lines = text.split('\n');
+  const patternParen = /\((\d+)\)([^()]*)/g;
+  lines.forEach(line=>{
+    line=line.trim();
+    if (!line) return;
+    if (line.includes("答案:")) {
+      let [qpart, apart] = line.split("答案:");
+      qpart=qpart.trim();
+      apart=apart.trim();
+      if (qtype==="是非題") {
+        let ansVal=0;
+        if (apart==="是") ansVal=1;
+        if (apart==="否") ansVal=2;
+        if (ansVal>0) {
+          questions[region][qtype].push({
+            question: qpart, answer: ansVal
+          });
+        }
+      } else {
+        // 選擇題
+        const matches = [...qpart.matchAll(patternParen)];
+        if (matches && matches.length>0) {
+          const firstIndex = qpart.indexOf(`(${matches[0][1]})`);
+          const qText = qpart.slice(0, firstIndex).trim();
+          let opts = {};
+          matches.forEach(m=>{
+            let num = parseInt(m[1],10);
+            let txt = m[2].replace(/[。]/g,"").trim();
+            opts[num] = txt;
+          });
+          let correct = parseInt(apart,10) || 0;
+          questions[region][qtype].push({
+            question: qText, options: opts, answer: correct
+          });
+        } else {
+          // 沒有(1)(2)(3)格式
+          questions[region][qtype].push({
+            question: qpart, options:{}, answer: apart
+          });
+        }
+      }
+    }
+  });
+}
+
+// -------------------------------------
+// 5. 在首頁顯示「統計資訊」(各縣市題數...)
+// -------------------------------------
+function renderStatsInfo() {
+  const statsDiv = document.getElementById('stats-info');
+  statsDiv.innerHTML = "";
+  const table = document.createElement('table');
+  table.className = 'stats-table';
+  let thead = document.createElement('thead');
+  thead.innerHTML = `
+    <tr>
+      <th>地區(或交通法令)</th>
+      <th>是非題數量(是/否)</th>
+      <th>選擇題數量(1/2/3)</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+
+  let tbody = document.createElement('tbody');
+
+  let listAll = [...REGIONS, "交通法令"];
+  listAll.forEach(region=>{
+    const row = document.createElement('tr');
+    let tfArr = questions[region]["是非題"];
+    let mcArr = questions[region]["選擇題"];
+
+    // 統計 是/否
+    let tfTrueCount = tfArr.filter(q=>q.answer===1).length;
+    let tfFalseCount= tfArr.filter(q=>q.answer===2).length;
+    let tfText = `${tfArr.length} 題 (是:${tfTrueCount}, 否:${tfFalseCount})`;
+
+    let tfMost = "";
+    if (tfTrueCount>tfFalseCount) {
+      tfMost=`，出現較多：是(${tfTrueCount})`;
+    } else if (tfFalseCount>tfTrueCount) {
+      tfMost=`，出現較多：否(${tfFalseCount})`;
+    }
+
+    tfText += tfMost;
+
+    // 統計 選擇題 (1/2/3)
+    let mcCount1 = mcArr.filter(q=>q.answer===1).length;
+    let mcCount2 = mcArr.filter(q=>q.answer===2).length;
+    let mcCount3 = mcArr.filter(q=>q.answer===3).length;
+    let mcText = `${mcArr.length} 題 (1:${mcCount1}, 2:${mcCount2}, 3:${mcCount3})`;
+
+    let maxVal = Math.max(mcCount1,mcCount2,mcCount3);
+    if (maxVal>0) {
+      let tmp=[];
+      if (mcCount1===maxVal) tmp.push("1");
+      if (mcCount2===maxVal) tmp.push("2");
+      if (mcCount3===maxVal) tmp.push("3");
+      mcText += `，出現最多：${tmp.join("/")} (${maxVal})`;
+    }
+
+    row.innerHTML=`
+      <td>${region}</td>
+      <td>${tfText}</td>
+      <td>${mcText}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  statsDiv.appendChild(table);
+}
+
+// -------------------------------------
+// 6. 查看題庫 (Bank) 功能
+// -------------------------------------
+document.getElementById('back-home-1').addEventListener('click', ()=> {
+  BANK_CONTAINER.classList.add('hidden');
+  HOME_CONTAINER.classList.remove('hidden');
+  document.getElementById('bank-content').innerHTML = "";
+});
+
+function showBankMenu() {
+  HOME_CONTAINER.classList.add('hidden');
+  QUIZ_CONTAINER.classList.add('hidden');
+  RESULT_CONTAINER.classList.add('hidden');
+  BANK_CONTAINER.classList.remove('hidden');
+}
+
+function renderBankMenu() {
+  const bankMenuDiv = document.getElementById('bank-menu');
+  bankMenuDiv.innerHTML = "";
+  let listAll = [...REGIONS, "交通法令"];
+  listAll.forEach(region=>{
+    QUESTION_TYPES.forEach(qtype=>{
+      let btn = document.createElement('button');
+      btn.className = "btn";
+      btn.style.marginRight="6px";
+      btn.textContent = `${region} ${qtype}`;
+      btn.onclick = ()=> showQuestionBank(region, qtype);
+      bankMenuDiv.appendChild(btn);
+    });
+    bankMenuDiv.appendChild(document.createElement('br'));
+  });
+}
+
+function showQuestionBank(region, qtype) {
+  const bankContent = document.getElementById('bank-content');
+  bankContent.innerHTML = `<h3>${region} ${qtype} 題庫</h3>
+    <button class="btn" id="back-to-menu">返回題庫選單</button>
+    <div class="scroll-box" id="bank-scroll"></div>
+  `;
+  document.getElementById('back-to-menu').addEventListener('click',()=>{
+    renderBankMenu();
+    bankContent.innerHTML="";
+  });
+
+  const scrollBox = document.getElementById('bank-scroll');
+  scrollBox.innerHTML = "";
+
+  let arr = questions[region][qtype];
+  arr.forEach((qObj, idx)=>{
+    let num = idx+1;
+    if (qtype==="是非題") {
+      let ansText = (qObj.answer===1) ? "是" : "否";
+      scrollBox.innerHTML += `
+        <p><b>${num}. ${qObj.question}</b><br/>
+        答案：<span class="correct">${ansText}</span>
+        </p>
+      `;
+    } else {
+      scrollBox.innerHTML += `<p><b>${num}. ${qObj.question}</b><br/>`;
+      if (Object.keys(qObj.options).length>0) {
+        let sortedKeys = Object.keys(qObj.options).sort((a,b)=> parseInt(a)-parseInt(b));
+        sortedKeys.forEach(k=>{
+          scrollBox.innerHTML += `&emsp;(${k}) ${qObj.options[k]}<br/>`;
+        });
+        scrollBox.innerHTML += `答案：<span class="correct">${qObj.answer}</span><br/>`;
+      } else {
+        scrollBox.innerHTML += `答案：<span class="correct">${qObj.answer}</span><br/>`;
+      }
+      scrollBox.innerHTML += `</p>`;
+    }
+  });
+}
+
+// -------------------------------------
+// 7. 開始測驗 (交通 / 地理)
+// -------------------------------------
+function startTrafficTest() {
+  trafficMode = true;
+  selectQuestionsTraffic();
+  currentPage=0;
+  userAnswers={};
+  correctAnswers={};
+  HOME_CONTAINER.classList.add('hidden');
+  BANK_CONTAINER.classList.add('hidden');
+  RESULT_CONTAINER.classList.add('hidden');
+  QUIZ_CONTAINER.classList.remove('hidden');
+  showQuestionPage();
+}
+
+function startGeoTest() {
+  trafficMode = false;
+  let total=0;
+  proportions={};
+  REGIONS.forEach(r=>{
+    let val = document.getElementById(`prop-${r}`).value;
+    let num = parseInt(val,10)||0;
+    proportions[r]=num;
+    total+=num;
+  });
+  if (total!==100) {
+    alert("五個縣市比例加總必須為100，目前為 "+total);
+    return;
+  }
+  selectQuestionsCity();
+  currentPage=0;
+  userAnswers={};
+  correctAnswers={};
+  HOME_CONTAINER.classList.add('hidden');
+  BANK_CONTAINER.classList.add('hidden');
+  RESULT_CONTAINER.classList.add('hidden');
+  QUIZ_CONTAINER.classList.remove('hidden');
+  showQuestionPage();
+}
+
+function selectQuestionsCity() {
+  selectedQuestions={"是非題":[],"選擇題":[]};
+  score=0;
+  let totalTF=20, totalMC=30;
+
+  // 是非
+  REGIONS.forEach(r=>{
+    let need = Math.round(proportions[r]/100*totalTF);
+    let pool=questions[r]["是非題"];
+    if (pool.length>0) {
+      let pickCount = Math.min(need,pool.length);
+      let picked = randomPick(pool,pickCount);
+      selectedQuestions["是非題"].push(...picked);
+    }
+  });
+  while (selectedQuestions["是非題"].length<20) {
+    let rr=randomItem(REGIONS);
+    let p=questions[rr]["是非題"];
+    if(!p.length) continue;
+    let c=randomItem(p);
+    if(!selectedQuestions["是非題"].includes(c)){
+      selectedQuestions["是非題"].push(c);
+    }
+  }
+
+  // 選擇
+  REGIONS.forEach(r=>{
+    let need=Math.round(proportions[r]/100*totalMC);
+    let pool=questions[r]["選擇題"];
+    if(pool.length>0){
+      let pickCount=Math.min(need,pool.length);
+      let picked=randomPick(pool,pickCount);
+      selectedQuestions["選擇題"].push(...picked);
+    }
+  });
+  while(selectedQuestions["選擇題"].length<30){
+    let rr=randomItem(REGIONS);
+    let p=questions[rr]["選擇題"];
+    if(!p.length) continue;
+    let c=randomItem(p);
+    if(!selectedQuestions["選擇題"].includes(c)){
+      selectedQuestions["選擇題"].push(c);
+    }
+  }
+  shuffleArray(selectedQuestions["是非題"]);
+  shuffleArray(selectedQuestions["選擇題"]);
+}
+
+function selectQuestionsTraffic() {
+  selectedQuestions={"是非題":[],"選擇題":[]};
+  score=0;
+
+  let tfAll=questions["交通法令"]["是非題"];
+  let mcAll=questions["交通法令"]["選擇題"];
+  if(tfAll.length<25){
+    selectedQuestions["是非題"]=tfAll.slice();
+  } else {
+    selectedQuestions["是非題"]=randomPick(tfAll,25);
+  }
+  if(mcAll.length<25){
+    selectedQuestions["選擇題"]=mcAll.slice();
+  } else {
+    selectedQuestions["選擇題"]=randomPick(mcAll,25);
+  }
+  shuffleArray(selectedQuestions["是非題"]);
+  shuffleArray(selectedQuestions["選擇題"]);
+}
+
+// -------------------------------------
+// 8. 分頁顯示考題(每頁10題，共5頁)
+// -------------------------------------
+function showQuestionPage() {
+  const titleEl = document.getElementById('quiz-page-title');
+  const navEl   = document.getElementById('quiz-nav');
+  const qArea   = document.getElementById('quiz-questions');
+
+  titleEl.textContent="";
+  navEl.innerHTML="";
+  qArea.innerHTML="";
+
+  let qtype="", pageTitle="", questionsList=[];
+
+  if(!trafficMode){
+    if(currentPage<2){
+      qtype="是非題";
+      let start=currentPage*10, end=start+10;
+      questionsList=selectedQuestions[qtype].slice(start,end);
+      pageTitle=`是非題 第 ${start+1} ~ ${end} 題`;
+    } else {
+      qtype="選擇題";
+      let start=(currentPage-2)*10, end=start+10;
+      questionsList=selectedQuestions[qtype].slice(start,end);
+      pageTitle=`選擇題 第 ${start+1} ~ ${end} 題`;
+    }
+  } else {
+    if(currentPage<2){
+      qtype="是非題";
+      let start=currentPage*10, end=start+10;
+      questionsList=selectedQuestions[qtype].slice(start,end);
+      pageTitle=`交通法規 是非題 第 ${start+1} ~ ${end} 題`;
+    } else if(currentPage===2){
+      let tfPart= selectedQuestions["是非題"].slice(20,25);
+      let mcPart= selectedQuestions["選擇題"].slice(0,5);
+      questionsList= tfPart.concat(mcPart);
+      pageTitle="交通法規 第 21 ~ 30 題（5 是非 + 5 選擇）";
+    } else {
+      if(currentPage===3){
+        questionsList= selectedQuestions["選擇題"].slice(5,15);
+        pageTitle="交通法規 選擇題 第 31 ~ 40 題";
+      } else {
+        questionsList= selectedQuestions["選擇題"].slice(15,25);
+        pageTitle="交通法規 選擇題 第 41 ~ 50 題";
+      }
+    }
+  }
+
+  titleEl.textContent= pageTitle;
+  if(currentPage>0){
+    const prevBtn=document.createElement('button');
+    prevBtn.className="btn";
+    prevBtn.textContent="上一頁";
+    prevBtn.style.marginRight="20px";
+    prevBtn.onclick=goPrev;
+    navEl.appendChild(prevBtn);
+  }
+  if(currentPage<4){
+    const nextBtn=document.createElement('button');
+    nextBtn.className="btn";
+    nextBtn.textContent="下一頁";
+    nextBtn.onclick=goNext;
+    navEl.appendChild(nextBtn);
+  } else {
+    const calcBtn=document.createElement('button');
+    calcBtn.className="btn";
+    calcBtn.textContent="計算成績";
+    calcBtn.onclick=calculateScore;
+    navEl.appendChild(calcBtn);
+  }
+
+  questionsList.forEach((qObj, idx)=>{
+    const globalQNum = getGlobalQuestionNumber(idx);
+    const block = document.createElement('div');
+    block.className='question-block';
+    block.innerHTML=`<b>${globalQNum}. ${qObj.question}</b><br/>`;
+
+    if(!('options' in qObj)){
+      block.innerHTML+=`
+        <label><input type="radio" name="q${globalQNum}" value="1"> 是</label><br/>
+        <label><input type="radio" name="q${globalQNum}" value="2"> 否</label>
+      `;
+    } else {
+      let sortedKeys=Object.keys(qObj.options).sort((a,b)=>parseInt(a)-parseInt(b));
+      sortedKeys.forEach(k=>{
+        block.innerHTML+=`
+          <label><input type="radio" name="q${globalQNum}" value="${k}"> (${k}) ${qObj.options[k]}</label><br/>
+        `;
+      });
+    }
+    qArea.appendChild(block);
+  });
+}
+
+function getGlobalQuestionNumber(localIndex){
+  if(!trafficMode){
+    if(currentPage<2){
+      return currentPage*10 + localIndex+1;
+    } else {
+      return 20 + (currentPage-2)*10 + localIndex+1;
+    }
+  } else {
+    if(currentPage<2){
+      return currentPage*10 + localIndex+1;
+    } else if(currentPage===2){
+      return 20 + localIndex+1;
+    } else if(currentPage===3){
+      return 30 + localIndex+1;
+    } else {
+      return 40 + localIndex+1;
+    }
+  }
+}
+
+function goPrev(){
+  saveAnswers();
+  if(currentPage>0){
+    currentPage--;
+    showQuestionPage();
+  }
+}
+function goNext(){
+  saveAnswers();
+  if(currentPage<4){
+    currentPage++;
+    showQuestionPage();
+  }
+}
+
+// -------------------------------------
+// 9. 計算分數 + 結果頁
+// -------------------------------------
+function saveAnswers(){
+  const quizQArea = document.getElementById('quiz-questions');
+  const checkedRadios = quizQArea.querySelectorAll('input[type="radio"]:checked');
+  checkedRadios.forEach(radio=>{
+    let name=radio.name;
+    let qNum=parseInt(name.replace('q',''),10);
+    userAnswers[qNum] = parseInt(radio.value,10);
+  });
+}
+
+function calculateScore(){
+  saveAnswers();
+  score=0;
+  correctAnswers={};
+
+  if(!trafficMode){
+    selectedQuestions["是非題"].forEach((qObj,i)=>{
+      let qNum=i+1; // 1~20
+      correctAnswers[qNum]=qObj.answer;
+      if(userAnswers[qNum]===qObj.answer){
+        score+=2;
+      }
+    });
+    selectedQuestions["選擇題"].forEach((qObj,i)=>{
+      let qNum=21+i; // 21~50
+      correctAnswers[qNum]=qObj.answer;
+      if(userAnswers[qNum]===qObj.answer){
+        score+=2;
+      }
+    });
+  } else {
+    selectedQuestions["是非題"].forEach((qObj,i)=>{
+      let qNum=i+1; //1~25
+      correctAnswers[qNum]=qObj.answer;
+      if(userAnswers[qNum]===qObj.answer){
+        score+=2;
+      }
+    });
+    selectedQuestions["選擇題"].forEach((qObj,i)=>{
+      let qNum=26+i; //26~50
+      correctAnswers[qNum]=qObj.answer;
+      if(userAnswers[qNum]===qObj.answer){
+        score+=2;
+      }
+    });
+  }
+
+  QUIZ_CONTAINER.classList.add('hidden');
+  RESULT_CONTAINER.classList.remove('hidden');
+  showScore();
+}
+
+function showScore(){
+  const resDiv=document.getElementById('result-area');
+  resDiv.innerHTML="";
+
+  let msg="";
+  if(score>=70){
+    msg=`您的成績：${score} 分 (及格)`;
+  } else {
+    msg=`您的成績：${score} 分 (不及格)`;
+  }
+  let p=document.createElement('p');
+  p.className='result';
+  p.textContent=msg;
+  resDiv.appendChild(p);
+
+  const corrBtn=document.createElement('button');
+  corrBtn.className="btn";
+  corrBtn.textContent="訂正錯誤";
+  corrBtn.onclick=showCorrections;
+  resDiv.appendChild(corrBtn);
+
+  const retakeBtn=document.createElement('button');
+  retakeBtn.className="btn";
+  retakeBtn.textContent="重新考試";
+  retakeBtn.style.marginLeft="10px";
+  retakeBtn.onclick=retakeQuiz;
+  resDiv.appendChild(retakeBtn);
+
+  const homeBtn=document.createElement('button');
+  homeBtn.className="btn";
+  homeBtn.textContent="顯示首頁";
+  homeBtn.style.marginLeft="10px";
+  homeBtn.onclick=()=>{
+    RESULT_CONTAINER.classList.add('hidden');
+    HOME_CONTAINER.classList.remove('hidden');
+  };
+  resDiv.appendChild(homeBtn);
+}
+
+// -------------------------------------
+// 10. 訂正錯誤 + 重新考試
+// -------------------------------------
+function showCorrections(){
+  const resDiv=document.getElementById('result-area');
+  resDiv.innerHTML="<h3>訂正錯誤</h3>";
+
+  let wrongCount=0;
+  const ul=document.createElement('ul');
+  ul.style.listStyleType="none";
+
+  for(let qNum in correctAnswers){
+    qNum=parseInt(qNum,10);
+    let userAns=userAnswers[qNum]||0;
+    let corrAns=correctAnswers[qNum];
+    if(userAns!==corrAns){
+      wrongCount++;
+      let qText="";
+      if(!trafficMode){
+        if(qNum<=20){
+          qText=selectedQuestions["是非題"][qNum-1].question;
+        } else {
+          let idx=qNum-21;
+          qText=selectedQuestions["選擇題"][idx].question;
+        }
+      } else {
+        if(qNum<=25){
+          qText=selectedQuestions["是非題"][qNum-1].question;
+        } else {
+          let idx=qNum-26;
+          qText=selectedQuestions["選擇題"][idx].question;
+        }
+      }
+
+      const li=document.createElement('li');
+      li.innerHTML=`
+        <div class="wrong"><b>第${qNum}題</b> ${qText}</div>
+        <div style="margin-left:20px;">
+          您的回答: <span class="wrong">${(userAns===0)?'未作答': userAns}</span><br/>
+          正確答案: <span class="correct">${corrAns}</span>
+        </div>
+      `;
+      ul.appendChild(li);
+    }
+  }
+
+  if(wrongCount===0){
+    resDiv.innerHTML+=`<p>恭喜！沒有答錯任何一題</p>`;
+  } else {
+    resDiv.appendChild(ul);
+  }
+
+  const retakeBtn=document.createElement('button');
+  retakeBtn.className="btn";
+  retakeBtn.textContent="重新考試";
+  retakeBtn.onclick=retakeQuiz;
+  resDiv.appendChild(retakeBtn);
+
+  const homeBtn=document.createElement('button');
+  homeBtn.className="btn";
+  homeBtn.textContent="顯示首頁";
+  homeBtn.style.marginLeft="10px";
+  homeBtn.onclick=()=>{
+    RESULT_CONTAINER.classList.add('hidden');
+    HOME_CONTAINER.classList.remove('hidden');
+  };
+  resDiv.appendChild(homeBtn);
+}
+
+function retakeQuiz(){
+  if(confirm("是否要回到首頁?")){
+    RESULT_CONTAINER.classList.add('hidden');
+    HOME_CONTAINER.classList.remove('hidden');
+  } else {
+    if(trafficMode){
+      startTrafficTest();
+    } else {
+      startGeoTest();
+    }
+  }
+}
+
+// -------------------------------------
+// 工具函式
+// -------------------------------------
+function randomPick(arr, count){
+  let copy=arr.slice();
+  shuffleArray(copy);
+  return copy.slice(0,count);
+}
+function randomItem(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+function shuffleArray(array){
+  for(let i=array.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [array[i],array[j]]=[array[j],array[i]];
+  }
+}
+</script>
+</body>
+</html>
