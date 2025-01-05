@@ -381,6 +381,7 @@ function renderBankMenu(){
   });
 }
 
+// ★ 修改後的 showQuestionBank：一次拼成大字串，再放入單一 <pre> 中
 function showQuestionBank(region, qtype){
   const bankContent=document.getElementById('bank-content');
   bankContent.innerHTML=`
@@ -397,29 +398,32 @@ function showQuestionBank(region, qtype){
   scrollBox.innerHTML="";
 
   let arr=questions[region][qtype];
+
+  // 一次組成大字串
+  let bigStr = "";
   arr.forEach((qObj,idx)=>{
     let num=idx+1;
     if(qtype==="是非題"){
       // 1=>是, 2=>否
       let ansText=(qObj.answer===1)?"是":"否";
-      scrollBox.innerHTML += `
-        <p><b>${num}. ${qObj.question}</b><br/>
-        答案：<span class="correct">${ansText}</span></p>
-      `;
+      bigStr += `${num}. ${qObj.question}\n`;
+      bigStr += `答案：${ansText}\n\n`;
     } else {
-      scrollBox.innerHTML += `<p><b>${num}. ${qObj.question}</b><br/>`;
+      bigStr += `${num}. ${qObj.question}\n`;
       if (Object.keys(qObj.options).length>0) {
         let sortedKeys=Object.keys(qObj.options).sort((a,b)=>parseInt(a)-parseInt(b));
         sortedKeys.forEach(k=>{
-          scrollBox.innerHTML += `&emsp;(${k}) ${qObj.options[k]}<br/>`;
+          bigStr += `    (${k}) ${qObj.options[k]}\n`;
         });
-        scrollBox.innerHTML += `答案：<span class="correct">${qObj.answer}</span><br/>`;
+        bigStr += `答案：${qObj.answer}\n\n`;
       } else {
-        scrollBox.innerHTML += `答案：<span class="correct">${qObj.answer}</span><br/>`;
+        bigStr += `答案：${qObj.answer}\n\n`;
       }
-      scrollBox.innerHTML += "</p>";
     }
   });
+
+  // 一次性插入到單一 <pre> 中
+  scrollBox.innerHTML = `<pre>${bigStr}</pre>`;
 }
 
 // --------------------------------------
@@ -793,9 +797,6 @@ function showCorrections(){
       wrongCount++;
 
       // 1. 取得題目資料
-      //    - 地理: 1~20 => 是非, 21~50 => 選擇
-      //    - 交通: 1~25 => 是非, 26~50 => 選擇
-      let qText="";
       let theQuestionObj=null;
       if(!trafficMode){
         if(qNum<=20){
@@ -810,7 +811,6 @@ function showCorrections(){
           theQuestionObj = selectedQuestions["選擇題"][qNum-26];
         }
       }
-      qText = theQuestionObj.question;
 
       // 2. 產生「您的回答 + 正確答案」的完整文字
       let userDisplay = "未作答";
@@ -840,7 +840,7 @@ function showCorrections(){
 
       const li=document.createElement('li');
       li.innerHTML=`
-        <div class="wrong"><b>第${qNum}題</b> ${qText}</div>
+        <div class="wrong"><b>第${qNum}題</b> ${theQuestionObj.question}</div>
         <div style="margin-left:20px;">
           您的回答：<span class="wrong">${userDisplay}</span><br/>
           正確答案：<span class="correct">${corrDisplay}</span>
