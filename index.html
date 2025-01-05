@@ -2,14 +2,15 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <!-- RWD: 手機端自動適應螢幕寬度 -->
+  <!-- 手機RWD -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>地理環境 & 交通法規測驗</title>
   <style>
     body {
       font-family: sans-serif;
       background: #f8fafc;
-      margin: 0; 
+      margin: 0;
       padding: 0;
     }
     .container {
@@ -45,6 +46,7 @@
       margin: 10px 0;
       padding: 10px;
       border-radius: 4px;
+      /* 過長文字自動換行 */
       word-wrap: break-word;
       white-space: pre-wrap;
     }
@@ -102,7 +104,6 @@
     }
   </style>
 </head>
-
 <body>
 <div class="container">
   <!-- 首頁容器 (Home) -->
@@ -158,33 +159,39 @@
 </div>
 
 <script>
+// --------------------------------------
+// 1. 全域變數、初始設定
+// --------------------------------------
 const REGIONS = ["基隆市","宜蘭縣","新北市","桃園市","臺北市"];
 const QUESTION_TYPES = ["是非題","選擇題"];
 
-const HOME_CONTAINER  = document.getElementById('home-container');
-const QUIZ_CONTAINER  = document.getElementById('quiz-container');
-const RESULT_CONTAINER= document.getElementById('result-container');
-const BANK_CONTAINER  = document.getElementById('bank-container');
+const HOME_CONTAINER   = document.getElementById('home-container');
+const QUIZ_CONTAINER   = document.getElementById('quiz-container');
+const RESULT_CONTAINER = document.getElementById('result-container');
+const BANK_CONTAINER   = document.getElementById('bank-container');
 
+// questions[region] = { "是非題": [...], "選擇題": [...] }
 let questions = {};
 questions["交通法令"] = { "是非題": [], "選擇題": [] };
 
-let proportions = {};
+let proportions     = {};
 let selectedQuestions = { "是非題":[], "選擇題":[] };
-let userAnswers = {};
-let correctAnswers = {};
+let userAnswers     = {};  // key=全卷題號, val=使用者選的選項數字
+let correctAnswers  = {};  // key=全卷題號, val=正確選項
 let score = 0;
 let trafficMode = false;
-let currentPage = 0;
+let currentPage = 0; // 0~4，共5頁
 
-// 1. 建立「輸入比例」
+// --------------------------------------
+// 2. 建立「輸入比例」區 & 綁定按鈕
+// --------------------------------------
 const regionInputsDiv = document.getElementById('region-inputs');
 REGIONS.forEach(r => {
   const rowDiv = document.createElement('div');
-  rowDiv.className='region-row';
-  rowDiv.innerHTML=`
+  rowDiv.className = 'region-row';
+  rowDiv.innerHTML = `
     <label>${r}</label>
-    <input type="number" id="prop-${r}" value="0" style="width:60px;margin-left:10px;">
+    <input type="number" id="prop-${r}" value="0" style="width:60px; margin-left:10px;">
   `;
   regionInputsDiv.appendChild(rowDiv);
 });
@@ -193,72 +200,88 @@ document.getElementById('start-traffic').addEventListener('click', startTrafficT
 document.getElementById('start-geo').addEventListener('click', startGeoTest);
 document.getElementById('view-bank-menu').addEventListener('click', showBankMenu);
 
-window.addEventListener('DOMContentLoaded', async() => {
+window.addEventListener('DOMContentLoaded', async () => {
   await loadAllQuestions();
   renderStatsInfo();
   renderBankMenu();
 });
 
-// 2. 載入題庫
+// --------------------------------------
+// 3. 載入題庫 (fetch 每個 txt)
+// --------------------------------------
 async function loadAllQuestions() {
-  REGIONS.forEach(r=>{
-    questions[r]={"是非題":[],"選擇題":[]};
+  REGIONS.forEach(r => {
+    questions[r] = { "是非題": [], "選擇題": [] };
   });
-  questions["交通法令"]={"是非題":[],"選擇題":[]};
+  questions["交通法令"] = { "是非題": [], "選擇題": [] };
 
-  for(const region of [...REGIONS,"交通法令"]){
-    for(const qtype of QUESTION_TYPES){
-      let filename=(region==="交通法令")
+  for (const region of [...REGIONS,"交通法令"]) {
+    for (const qtype of QUESTION_TYPES) {
+      let filename = (region==="交通法令") 
         ? `${region}_${qtype}.txt`
         : `${region}_地理環境_${qtype}.txt`;
-      try{
-        const res=await fetch(filename);
-        if(!res.ok){ console.log(`無法讀取: ${filename}`); continue; }
-        const text=await res.text();
-        parseTextToQuestions(region,qtype,text);
-      }catch(e){
+
+      try {
+        const res = await fetch(filename);
+        if (!res.ok) {
+          console.log(`無法讀取: ${filename}`);
+          continue;
+        }
+        const text = await res.text();
+        parseTextToQuestions(region, qtype, text);
+      } catch(e) {
         console.log(`fetch 錯誤: ${filename}`, e);
       }
     }
   }
 }
 
-// 解析TXT
-function parseTextToQuestions(region,qtype,text){
-  const lines=text.split('\n');
-  const patternParen=/\((\d+)\)([^()]*)/g;
-  lines.forEach(line=>{
-    line=line.trim();
-    if(!line) return;
-    if(line.includes("答案:")){
-      const [qpart,apart]=line.split("答案:");
-      const questionText=qpart.trim();
-      const answerText=apart.trim();
-      if(qtype==="是非題"){
+function parseTextToQuestions(region, qtype, text) {
+  const lines = text.split('\n');
+  const patternParen = /\((\d+)\)([^()]*)/g;
+
+  lines.forEach(line => {
+    line = line.trim();
+    if (!line) return;
+    if (line.includes("答案:")) {
+      const [qpart, apart] = line.split("答案:");
+      const questionText = qpart.trim();
+      const answerText   = apart.trim();
+
+      if (qtype==="是非題") {
         let ansVal=0;
-        if(answerText==="是") ansVal=1;
-        else if(answerText==="否") ansVal=2;
-        if(ansVal>0){
-          questions[region][qtype].push({question:questionText,answer:ansVal});
+        if (answerText==="是") ansVal=1;
+        else if (answerText==="否") ansVal=2;
+        if (ansVal>0) {
+          questions[region][qtype].push({
+            question: questionText,
+            answer: ansVal  // 1=是, 2=否
+          });
         }
-      }else{
-        let matches=[...questionText.matchAll(patternParen)];
-        if(matches.length>0){
-          const firstIndex=questionText.indexOf(`(${matches[0][1]})`);
-          const qTxt=questionText.slice(0,firstIndex).trim();
-          let opts={};
+      } else {
+        // 選擇題
+        let matches = [...questionText.matchAll(patternParen)];
+        if (matches.length>0) {
+          const firstIndex = questionText.indexOf(`(${matches[0][1]})`);
+          const qTxt = questionText.slice(0, firstIndex).trim();
+          let opts = {};
           matches.forEach(m=>{
-            let num=parseInt(m[1],10);
-            let txt=m[2].replace(/[。]/g,"").trim();
-            opts[num]=txt;
+            let num = parseInt(m[1],10);
+            let txt = m[2].replace(/[。]/g,"").trim();
+            opts[num] = txt;
           });
-          let correct=parseInt(answerText,10)||0;
+          let correct = parseInt(answerText,10)||0;
           questions[region][qtype].push({
-            question: qTxt, options: opts, answer: correct
+            question: qTxt,
+            options: opts,
+            answer: correct
           });
-        }else{
+        } else {
+          // 沒有(1)(2)(3)
           questions[region][qtype].push({
-            question: questionText, options:{}, answer: answerText
+            question: questionText,
+            options: {},
+            answer: answerText
           });
         }
       }
@@ -266,12 +289,15 @@ function parseTextToQuestions(region,qtype,text){
   });
 }
 
-// 3. 統計資訊
-function renderStatsInfo(){
+// --------------------------------------
+// 4. 顯示統計資訊到首頁
+// --------------------------------------
+function renderStatsInfo() {
   const statsDiv=document.getElementById('stats-info');
   statsDiv.innerHTML="";
   const table=document.createElement('table');
   table.className='stats-table';
+
   table.innerHTML=`
     <thead>
       <tr>
@@ -282,30 +308,31 @@ function renderStatsInfo(){
     </thead>
   `;
   let tbody=document.createElement('tbody');
-  [...REGIONS,"交通法令"].forEach(region=>{
-    let tfArr=questions[region]["是非題"];
-    let mcArr=questions[region]["選擇題"];
 
-    let tfTrue=tfArr.filter(q=>q.answer===1).length;
-    let tfFalse=tfArr.filter(q=>q.answer===2).length;
-    let tfDesc=`${tfArr.length} 題(是:${tfTrue}, 否:${tfFalse})`;
-    if(tfTrue>tfFalse){
-      tfDesc+=`，出現較多：是(${tfTrue})`;
-    }else if(tfFalse>tfTrue){
-      tfDesc+=`，出現較多：否(${tfFalse})`;
+  [...REGIONS, "交通法令"].forEach(region=>{
+    let tfArr = questions[region]["是非題"];
+    let mcArr = questions[region]["選擇題"];
+
+    let tfTrue = tfArr.filter(q=>q.answer===1).length;
+    let tfFalse= tfArr.filter(q=>q.answer===2).length;
+    let tfDesc = `${tfArr.length} 題(是:${tfTrue}, 否:${tfFalse})`;
+    if (tfTrue>tfFalse){
+      tfDesc += `，出現較多：是(${tfTrue})`;
+    } else if(tfFalse>tfTrue){
+      tfDesc += `，出現較多：否(${tfFalse})`;
     }
 
-    let mcCount1=mcArr.filter(q=>q.answer===1).length;
-    let mcCount2=mcArr.filter(q=>q.answer===2).length;
-    let mcCount3=mcArr.filter(q=>q.answer===3).length;
-    let mcDesc=`${mcArr.length} 題(1:${mcCount1}, 2:${mcCount2}, 3:${mcCount3})`;
+    let mcCount1 = mcArr.filter(q=>q.answer===1).length;
+    let mcCount2 = mcArr.filter(q=>q.answer===2).length;
+    let mcCount3 = mcArr.filter(q=>q.answer===3).length;
+    let mcDesc = `${mcArr.length} 題(1:${mcCount1}, 2:${mcCount2}, 3:${mcCount3})`;
     let maxVal=Math.max(mcCount1,mcCount2,mcCount3);
     if(maxVal>0){
       let tmp=[];
       if(mcCount1===maxVal) tmp.push("1");
       if(mcCount2===maxVal) tmp.push("2");
       if(mcCount3===maxVal) tmp.push("3");
-      mcDesc+=`，出現最多：${tmp.join("/")} (${maxVal})`;
+      mcDesc += `，出現最多：${tmp.join("/")} (${maxVal})`;
     }
 
     let tr=document.createElement('tr');
@@ -316,22 +343,27 @@ function renderStatsInfo(){
     `;
     tbody.appendChild(tr);
   });
+
   table.appendChild(tbody);
   statsDiv.appendChild(table);
 }
 
-// 4. 查看題庫
+// --------------------------------------
+// 5. 查看題庫 (Bank) 功能
+// --------------------------------------
 document.getElementById('back-home-1').addEventListener('click',()=>{
   BANK_CONTAINER.classList.add('hidden');
   HOME_CONTAINER.classList.remove('hidden');
   document.getElementById('bank-content').innerHTML="";
 });
+
 function showBankMenu(){
   HOME_CONTAINER.classList.add('hidden');
   QUIZ_CONTAINER.classList.add('hidden');
   RESULT_CONTAINER.classList.add('hidden');
   BANK_CONTAINER.classList.remove('hidden');
 }
+
 function renderBankMenu(){
   const bankMenuDiv=document.getElementById('bank-menu');
   bankMenuDiv.innerHTML="";
@@ -348,7 +380,8 @@ function renderBankMenu(){
     bankMenuDiv.appendChild(document.createElement('br'));
   });
 }
-function showQuestionBank(region,qtype){
+
+function showQuestionBank(region, qtype){
   const bankContent=document.getElementById('bank-content');
   bankContent.innerHTML=`
     <h3>${region} ${qtype} 題庫</h3>
@@ -359,6 +392,7 @@ function showQuestionBank(region,qtype){
     renderBankMenu();
     bankContent.innerHTML="";
   });
+
   const scrollBox=document.getElementById('bank-scroll');
   scrollBox.innerHTML="";
 
@@ -366,28 +400,31 @@ function showQuestionBank(region,qtype){
   arr.forEach((qObj,idx)=>{
     let num=idx+1;
     if(qtype==="是非題"){
+      // 1=>是, 2=>否
       let ansText=(qObj.answer===1)?"是":"否";
-      scrollBox.innerHTML+=`
+      scrollBox.innerHTML += `
         <p><b>${num}. ${qObj.question}</b><br/>
         答案：<span class="correct">${ansText}</span></p>
       `;
     } else {
-      scrollBox.innerHTML+=`<p><b>${num}. ${qObj.question}</b><br/>`;
-      if(Object.keys(qObj.options).length>0){
+      scrollBox.innerHTML += `<p><b>${num}. ${qObj.question}</b><br/>`;
+      if (Object.keys(qObj.options).length>0) {
         let sortedKeys=Object.keys(qObj.options).sort((a,b)=>parseInt(a)-parseInt(b));
         sortedKeys.forEach(k=>{
-          scrollBox.innerHTML+=`&emsp;(${k}) ${qObj.options[k]}<br/>`;
+          scrollBox.innerHTML += `&emsp;(${k}) ${qObj.options[k]}<br/>`;
         });
-        scrollBox.innerHTML+=`答案：<span class="correct">${qObj.answer}</span><br/>`;
+        scrollBox.innerHTML += `答案：<span class="correct">${qObj.answer}</span><br/>`;
       } else {
-        scrollBox.innerHTML+=`答案：<span class="correct">${qObj.answer}</span><br/>`;
+        scrollBox.innerHTML += `答案：<span class="correct">${qObj.answer}</span><br/>`;
       }
-      scrollBox.innerHTML+="</p>";
+      scrollBox.innerHTML += "</p>";
     }
   });
 }
 
-// 5. 開始測驗(交通/地理)
+// --------------------------------------
+// 6. 開始測驗(交通 / 地理)
+// --------------------------------------
 function startTrafficTest(){
   trafficMode=true;
   selectQuestionsTraffic();
@@ -400,6 +437,7 @@ function startTrafficTest(){
   QUIZ_CONTAINER.classList.remove('hidden');
   showQuestionPage();
 }
+
 function startGeoTest(){
   trafficMode=false;
   let total=0;
@@ -407,7 +445,7 @@ function startGeoTest(){
   REGIONS.forEach(r=>{
     let val=document.getElementById(`prop-${r}`).value;
     let num=parseInt(val,10)||0;
-    proportions[r]=num; 
+    proportions[r]=num;
     total+=num;
   });
   if(total!==100){
@@ -425,12 +463,12 @@ function startGeoTest(){
   showQuestionPage();
 }
 
-// 抽題 (地理)
 function selectQuestionsCity(){
   selectedQuestions={"是非題":[],"選擇題":[]};
   score=0;
   let totalTF=20, totalMC=30;
-  // (A) 是非題
+
+  // 是非題
   REGIONS.forEach(r=>{
     let need=Math.round(proportions[r]/100*totalTF);
     let pool=questions[r]["是非題"];
@@ -449,7 +487,8 @@ function selectQuestionsCity(){
       selectedQuestions["是非題"].push(c);
     }
   }
-  // (B) 選擇題
+
+  // 選擇題
   REGIONS.forEach(r=>{
     let need=Math.round(proportions[r]/100*totalMC);
     let pool=questions[r]["選擇題"];
@@ -468,11 +507,10 @@ function selectQuestionsCity(){
       selectedQuestions["選擇題"].push(c);
     }
   }
+
   shuffleArray(selectedQuestions["是非題"]);
   shuffleArray(selectedQuestions["選擇題"]);
 }
-
-// 抽題 (交通)
 function selectQuestionsTraffic(){
   selectedQuestions={"是非題":[],"選擇題":[]};
   score=0;
@@ -493,18 +531,23 @@ function selectQuestionsTraffic(){
   shuffleArray(selectedQuestions["選擇題"]);
 }
 
-// 6. 分頁顯示(題目 + 回填 + 分頁按鈕)
+// --------------------------------------
+// 7. 分頁顯示(題目+回填+分頁按鈕)
+// --------------------------------------
 function showQuestionPage(){
   const titleEl=document.getElementById('quiz-page-title');
   const navEl=document.getElementById('quiz-nav');
   const qArea=document.getElementById('quiz-questions');
+  
   titleEl.textContent="";
   navEl.innerHTML="";
   qArea.innerHTML="";
 
   let pageTitle="";
   let questionsList=[];
+
   if(!trafficMode){
+    // 地理
     if(currentPage<2){
       let start=currentPage*10,end=start+10;
       questionsList=selectedQuestions["是非題"].slice(start,end);
@@ -515,6 +558,7 @@ function showQuestionPage(){
       pageTitle=`選擇題 第 ${start+1} ~ ${end} 題`;
     }
   } else {
+    // 交通法規
     if(currentPage<2){
       let start=currentPage*10,end=start+10;
       questionsList=selectedQuestions["是非題"].slice(start,end);
@@ -536,17 +580,21 @@ function showQuestionPage(){
   }
   titleEl.textContent=pageTitle;
 
-  questionsList.forEach((qObj,idx)=>{
-    const globalQNum=getGlobalQuestionNumber(idx);
+  // 生成題目 & 回填
+  questionsList.forEach((qObj, idx)=>{
+    const globalQNum = getGlobalQuestionNumber(idx);
     const block=document.createElement('div');
     block.className='question-block';
     block.innerHTML=`<b>${globalQNum}. ${qObj.question}</b><br/>`;
+
     if(!('options' in qObj)){
-      block.innerHTML+=`
+      // 是非題
+      block.innerHTML += `
         <label><input type="radio" name="q${globalQNum}" value="1"> 是</label><br/>
         <label><input type="radio" name="q${globalQNum}" value="2"> 否</label>
       `;
     } else {
+      // 選擇題
       let sortedKeys=Object.keys(qObj.options).sort((a,b)=>parseInt(a)-parseInt(b));
       sortedKeys.forEach(k=>{
         block.innerHTML+=`
@@ -556,13 +604,11 @@ function showQuestionPage(){
     }
     qArea.appendChild(block);
 
-    // ★ 回填
-    const savedVal=userAnswers[globalQNum]; 
+    // 回填
+    const savedVal = userAnswers[globalQNum];
     if(savedVal!==undefined){
-      const radioToCheck=block.querySelector(`input[name="q${globalQNum}"][value="${savedVal}"]`);
-      if(radioToCheck){
-        radioToCheck.checked=true;
-      }
+      const radioToCheck = block.querySelector(`input[name="q${globalQNum}"][value="${savedVal}"]`);
+      if(radioToCheck) radioToCheck.checked=true;
     }
   });
 
@@ -591,32 +637,32 @@ function showQuestionPage(){
 }
 function getGlobalQuestionNumber(localIndex){
   if(!trafficMode){
+    // 地理: 前20是非(1~20), 後30選擇(21~50)
     if(currentPage<2){
-      return currentPage*10+localIndex+1;
-    }else{
-      return 20+(currentPage-2)*10+localIndex+1;
+      return currentPage*10 + localIndex +1;
+    } else {
+      return 20 + (currentPage-2)*10 + localIndex +1;
     }
   } else {
+    // 交通: 25是非(1~25), 25選擇(26~50)
     if(currentPage<2){
-      return currentPage*10+localIndex+1;
+      return currentPage*10 + localIndex +1;
     } else if(currentPage===2){
-      return 20+localIndex+1;
+      return 20 + localIndex +1;
     } else if(currentPage===3){
-      return 30+localIndex+1;
+      return 30 + localIndex +1;
     } else {
-      return 40+localIndex+1;
+      return 40 + localIndex +1;
     }
   }
 }
-
-// ★ 讓畫面捲到最上方
 function goPrev(){
   saveAnswers();
   if(currentPage>0){
     currentPage--;
     showQuestionPage();
-    // 當重新顯示該頁時，滾動到頂
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    // 捲到頂
+    window.scrollTo({top:0,left:0,behavior:'smooth'});
   }
 }
 function goNext(){
@@ -624,45 +670,50 @@ function goNext(){
   if(currentPage<4){
     currentPage++;
     showQuestionPage();
-    // 當重新顯示該頁時，滾動到頂
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    window.scrollTo({top:0,left:0,behavior:'smooth'});
   } else {
     calculateScore();
   }
 }
 
-// 7. 計算分數
+// --------------------------------------
+// 8. 計算分數 + 訂正
+// --------------------------------------
 function saveAnswers(){
   const quizQArea=document.getElementById('quiz-questions');
   const checkedRadios=quizQArea.querySelectorAll('input[type="radio"]:checked');
   checkedRadios.forEach(radio=>{
-    let name=radio.name;
+    let name=radio.name; // ex:"q5"
     let qNum=parseInt(name.replace('q',''),10);
     userAnswers[qNum]=parseInt(radio.value,10);
   });
 }
+
 function calculateScore(){
   saveAnswers();
   score=0;
   correctAnswers={};
+
   if(!trafficMode){
     // 地理
+    // 前20 => 是非(1~20), 後30 => 選擇(21~50)
     selectedQuestions["是非題"].forEach((qObj,i)=>{
-      let qNum=i+1;
-      correctAnswers[qNum]=qObj.answer;
+      let qNum = i+1;
+      correctAnswers[qNum] = qObj.answer;
       if(userAnswers[qNum]===qObj.answer){
         score+=2;
       }
     });
     selectedQuestions["選擇題"].forEach((qObj,i)=>{
       let qNum=21+i;
-      correctAnswers[qNum]=qObj.answer;
+      correctAnswers[qNum]= qObj.answer;
       if(userAnswers[qNum]===qObj.answer){
         score+=2;
       }
     });
   } else {
     // 交通
+    // 1~25 => 是非, 26~50 => 選擇
     selectedQuestions["是非題"].forEach((qObj,i)=>{
       let qNum=i+1;
       correctAnswers[qNum]=qObj.answer;
@@ -678,14 +729,20 @@ function calculateScore(){
       }
     });
   }
+
   QUIZ_CONTAINER.classList.add('hidden');
   RESULT_CONTAINER.classList.remove('hidden');
   showScore();
 }
+
 function showScore(){
   const resDiv=document.getElementById('result-area');
   resDiv.innerHTML="";
-  let msg=(score>=70)? `您的成績：${score} 分 (及格)` : `您的成績：${score} 分 (不及格)`;
+  
+  let msg=(score>=70)
+    ? `您的成績：${score} 分 (及格)`
+    : `您的成績：${score} 分 (不及格)`;
+
   let p=document.createElement('p');
   p.className='result';
   p.textContent=msg;
@@ -711,56 +768,88 @@ function showScore(){
   homeBtn.onclick=()=>{
     RESULT_CONTAINER.classList.add('hidden');
     HOME_CONTAINER.classList.remove('hidden');
-    // 若要分數出來也直接回頂端
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    window.scrollTo({top:0,left:0,behavior:'smooth'});
   };
   resDiv.appendChild(homeBtn);
 
-  // 分數計算後也可捲到頂
-  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  // 分數出來後也回到頂端
+  window.scrollTo({top:0,left:0,behavior:'smooth'});
 }
 
-// 8. 訂正錯誤 + 重新考試
+// ★ 訂正錯誤：顯示「題目 + 您的回答(完整) + 正確答案(完整)」
 function showCorrections(){
   const resDiv=document.getElementById('result-area');
   resDiv.innerHTML="<h3>訂正錯誤</h3>";
+
   let wrongCount=0;
   const ul=document.createElement('ul');
   ul.style.listStyleType="none";
 
   for(let qNum in correctAnswers){
     qNum=parseInt(qNum,10);
-    let userAns=userAnswers[qNum]||0;
-    let corrAns=correctAnswers[qNum];
+    let userAns = userAnswers[qNum] || 0;
+    let corrAns = correctAnswers[qNum];
     if(userAns!==corrAns){
       wrongCount++;
+
+      // 1. 取得題目資料
+      //    - 地理: 1~20 => 是非, 21~50 => 選擇
+      //    - 交通: 1~25 => 是非, 26~50 => 選擇
       let qText="";
+      let theQuestionObj=null;
       if(!trafficMode){
         if(qNum<=20){
-          qText=selectedQuestions["是非題"][qNum-1].question;
+          theQuestionObj = selectedQuestions["是非題"][qNum-1];
         } else {
-          let idx=qNum-21;
-          qText=selectedQuestions["選擇題"][idx].question;
+          theQuestionObj = selectedQuestions["選擇題"][qNum-21];
         }
       } else {
         if(qNum<=25){
-          qText=selectedQuestions["是非題"][qNum-1].question;
+          theQuestionObj = selectedQuestions["是非題"][qNum-1];
         } else {
-          let idx=qNum-26;
-          qText=selectedQuestions["選擇題"][idx].question;
+          theQuestionObj = selectedQuestions["選擇題"][qNum-26];
         }
       }
+      qText = theQuestionObj.question;
+
+      // 2. 產生「您的回答 + 正確答案」的完整文字
+      let userDisplay = "未作答";
+      let corrDisplay = "未知";
+
+      if(!("options" in theQuestionObj)){
+        // 是非題 => 1=是, 2=否
+        let ansMap = {1:"是", 2:"否"};
+        userDisplay  = (userAns>0)? `${userAns}. ${ansMap[userAns]}` : "未作答";
+        corrDisplay = `${corrAns}. ${ansMap[corrAns]}`;
+      } else {
+        // 選擇題 => userAns=2 => "2. <option text>"
+        const opts=theQuestionObj.options; 
+        if(userAns>0 && opts[userAns]){
+          userDisplay = `${userAns}. ${opts[userAns]}`;
+        } else if(userAns===0){
+          userDisplay = "未作答";
+        } else {
+          userDisplay = userAns + ". [未定義選項]";
+        }
+        if(corrAns>0 && opts[corrAns]){
+          corrDisplay = `${corrAns}. ${opts[corrAns]}`;
+        } else {
+          corrDisplay = corrAns + ". [未知選項]";
+        }
+      }
+
       const li=document.createElement('li');
       li.innerHTML=`
         <div class="wrong"><b>第${qNum}題</b> ${qText}</div>
         <div style="margin-left:20px;">
-          您的回答: <span class="wrong">${(userAns===0)?'未作答':userAns}</span><br/>
-          正確答案: <span class="correct">${corrAns}</span>
+          您的回答：<span class="wrong">${userDisplay}</span><br/>
+          正確答案：<span class="correct">${corrDisplay}</span>
         </div>
       `;
       ul.appendChild(li);
     }
   }
+
   if(wrongCount===0){
     resDiv.innerHTML+=`<p>恭喜！沒有答錯任何一題</p>`;
   } else {
@@ -780,22 +869,25 @@ function showCorrections(){
   homeBtn.onclick=()=>{
     RESULT_CONTAINER.classList.add('hidden');
     HOME_CONTAINER.classList.remove('hidden');
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    window.scrollTo({top:0,left:0,behavior:'smooth'});
   };
   resDiv.appendChild(homeBtn);
 }
+
 function retakeQuiz(){
-  if(confirm("是否要回到首頁?")){
+  if(confirm("是否要回到首頁？")){
     RESULT_CONTAINER.classList.add('hidden');
     HOME_CONTAINER.classList.remove('hidden');
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    window.scrollTo({top:0,left:0,behavior:'smooth'});
   } else {
     if(trafficMode) startTrafficTest();
     else startGeoTest();
   }
 }
 
-// 9. 工具函式
+// --------------------------------------
+// 工具函式
+// --------------------------------------
 function randomPick(arr,count){
   let copy=arr.slice();
   shuffleArray(copy);
