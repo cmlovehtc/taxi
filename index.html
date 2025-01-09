@@ -104,6 +104,18 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       z-index: 1000;
     }
+    /* 新增：將勾選縣市每行顯示三個 */
+    #region-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    #region-checkboxes label {
+      width: 33.33%;
+      box-sizing: border-box;
+      padding: 5px 0;
+    }
+
     @media (max-width: 600px) {
       .container {
         margin: 0 10px; 
@@ -114,6 +126,10 @@
       }
       .btn {
         font-size: 14px;
+      }
+      /* 調整小螢幕下每行顯示兩個 */
+      #region-checkboxes label {
+        width: 50%;
       }
     }
   </style>
@@ -332,9 +348,8 @@
     const checkboxDiv = document.getElementById('region-checkboxes');
     checkboxDiv.innerHTML = ""; // 清空
 
-    REGIONS.forEach(r => {
+    REGIONS.forEach((r, index) => {
       const label = document.createElement('label');
-      label.style.marginRight = "10px";
       label.innerHTML = `
         <input type="checkbox" value="${r}"> ${r}
       `;
