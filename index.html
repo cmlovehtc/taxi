@@ -141,6 +141,16 @@
     .bank-top-nav button {
       margin: 0 5px;
     }
+    /* 新增排序用的按鈕區 */
+    .bank-sort-nav {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .bank-sort-nav button {
+      margin: 0 4px;
+      font-size: 0.9rem;
+      padding: 5px 10px;
+    }
     /* 修改這裡，設定兩欄比例，左邊寬、右邊窄 */
     .bank-content-page {
       display: grid;
@@ -457,7 +467,7 @@
       BANK_CONTAINER.classList.remove('hidden');
       renderBankMenu();
       document.getElementById('bank-content').innerHTML = "";
-      // 當進入題庫檢視頁時，捲軸固定在頁面最上方，方便看到功能按鈕
+      // 當進入題庫檢視頁時，捲軸固定在頁面最上方
       window.scrollTo(0, 0);
     }
 
@@ -493,7 +503,6 @@
         rightDiv.classList.add('highlight');
       });
       leftDiv.addEventListener('mouseleave', () => {
-        // 如果不是使用點擊後切換的狀態就還原
         if(!rightDiv.classList.contains('toggle')) {
           rightDiv.classList.remove('show');
           leftDiv.classList.remove('highlight');
@@ -537,7 +546,7 @@
           rightDiv.classList.remove('show');
         }
       });
-      // 行動裝置（觸控）事件：採用 touchend 避免 touchstart 造成捲動阻斷
+      // 行動裝置（觸控）事件
       leftDiv.addEventListener('touchend', (e) => {
         e.preventDefault();
         leftDiv.classList.toggle('toggle');
@@ -568,7 +577,106 @@
       }, { passive: false });
     }
 
-    // 修改後的 showQuestionBank：上方放置功能選單，下面才是題目列表與分頁資訊
+    // 在原有功能選單上增加排序按鈕區 (bank-sort-nav)
+    // 根據題型呈現不同的排序選項
+    function renderSortNav(qtype) {
+      const sortNav = document.createElement('div');
+      sortNav.className = "bank-sort-nav";
+      // 清空先前的排序選項，再新增按鈕
+      if(qtype === "是非題") {
+        // 依答案是排序
+        let sortYesBtn = document.createElement('button');
+        sortYesBtn.className = "btn";
+        sortYesBtn.textContent = "答案是排序";
+        sortYesBtn.onclick = () => {
+          // 將答案為「是」 (answer===1) 的題目排前面
+          bankAllData.sort((a, b) => {
+            if(a.answer === b.answer) return a.index - b.index;
+            return (a.answer === 1) ? -1 : (b.answer === 1) ? 1 : 0;
+          });
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sortYesBtn);
+        // 依答案否排序
+        let sortNoBtn = document.createElement('button');
+        sortNoBtn.className = "btn";
+        sortNoBtn.textContent = "答案否排序";
+        sortNoBtn.onclick = () => {
+          // 將答案為「否」 (answer===2) 的題目排前面
+          bankAllData.sort((a, b) => {
+            if(a.answer === b.answer) return a.index - b.index;
+            return (a.answer === 2) ? -1 : (b.answer === 2) ? 1 : 0;
+          });
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sortNoBtn);
+        // 依題號排序 (原始順序：根據 index 升冪排序)
+        let sortIndexBtn = document.createElement('button');
+        sortIndexBtn.className = "btn";
+        sortIndexBtn.textContent = "題號排序";
+        sortIndexBtn.onclick = () => {
+          bankAllData.sort((a, b) => a.index - b.index);
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sortIndexBtn);
+      } else if(qtype === "選擇題") {
+        // 依答案選項 1 排序
+        let sort1Btn = document.createElement('button');
+        sort1Btn.className = "btn";
+        sort1Btn.textContent = "1排序";
+        sort1Btn.onclick = () => {
+          bankAllData.sort((a, b) => {
+            if(a.answer === b.answer) return a.index - b.index;
+            return (a.answer === 1) ? -1 : (b.answer === 1) ? 1 : 0;
+          });
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sort1Btn);
+        // 依答案選項 2 排序
+        let sort2Btn = document.createElement('button');
+        sort2Btn.className = "btn";
+        sort2Btn.textContent = "2排序";
+        sort2Btn.onclick = () => {
+          bankAllData.sort((a, b) => {
+            if(a.answer === b.answer) return a.index - b.index;
+            return (a.answer === 2) ? -1 : (b.answer === 2) ? 1 : 0;
+          });
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sort2Btn);
+        // 依答案選項 3 排序
+        let sort3Btn = document.createElement('button');
+        sort3Btn.className = "btn";
+        sort3Btn.textContent = "3排序";
+        sort3Btn.onclick = () => {
+          bankAllData.sort((a, b) => {
+            if(a.answer === b.answer) return a.index - b.index;
+            return (a.answer === 3) ? -1 : (b.answer === 3) ? 1 : 0;
+          });
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sort3Btn);
+        // 依題號排序
+        let sortIndexBtn = document.createElement('button');
+        sortIndexBtn.className = "btn";
+        sortIndexBtn.textContent = "題號排序";
+        sortIndexBtn.onclick = () => {
+          bankAllData.sort((a, b) => a.index - b.index);
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        sortNav.appendChild(sortIndexBtn);
+      }
+      return sortNav;
+    }
+
+    // 修改後的 showQuestionBank：上方放置功能選單與排序按鈕區，下面才是題目列表與分頁資訊
     function showQuestionBank(region, qtype){
       const bankContent = document.getElementById('bank-content');
       bankContent.innerHTML = `
@@ -577,6 +685,7 @@
           <button class="btn" id="back-to-home">回首頁</button>
           <button class="btn" id="toggle-answer">顯示所有答案</button>
         </div>
+        <div id="bank-sort-area"></div>
         <div id="bank-page-view"></div>
         <div class="bank-footer">移動或點擊題目會顯示答案</div>
       `;
@@ -596,17 +705,23 @@
         const toggleBtn = document.getElementById('toggle-answer');
         toggleBtn.textContent = bankShowAllAnswer ? "隱藏所有答案" : "顯示所有答案";
         renderBankPage(qtype);
+        window.scrollTo(0, 0);
       });
-      // 準備資料
+      // 加入排序按鈕區
+      const sortArea = document.getElementById('bank-sort-area');
+      sortArea.innerHTML = "";
+      sortArea.appendChild(renderSortNav(qtype));
+      
+      // 準備資料：記錄原始題號
       let arr = questions[region][qtype];
       bankAllData = [];
       arr.forEach((qObj, idx) => {
+        // 直接記錄原始順序到 index 屬性（此 index 為原始題號）
         bankAllData.push(Object.assign({ index: idx + 1 }, qObj));
       });
       bankTotalPages = Math.ceil(bankAllData.length / 50);
       bankCurrentPage = 0;
       renderBankPage(qtype);
-      // 進入題庫檢視頁後，強制捲軸維持在最上方，讓使用者看到上方的功能按鈕
       window.scrollTo(0, 0);
     }
 
