@@ -491,7 +491,65 @@
       });
     }
 
-    // 修改後的 showQuestionBank：進入題庫檢視模式後，
+    // 新增：針對滑鼠與行動裝置事件，統一加入提示效果
+    function addHighlightEvents(leftDiv, rightDiv) {
+      // 桌機：滑鼠事件
+      leftDiv.addEventListener('mouseenter', () => {
+        rightDiv.classList.add('show');
+        leftDiv.classList.add('highlight');
+        rightDiv.classList.add('highlight');
+      });
+      leftDiv.addEventListener('mouseleave', () => {
+        if(!bankShowAllAnswer) {
+          rightDiv.classList.remove('show');
+        }
+        leftDiv.classList.remove('highlight');
+        rightDiv.classList.remove('highlight');
+      });
+      leftDiv.addEventListener('click', () => {
+        rightDiv.classList.toggle('show');
+        leftDiv.classList.toggle('highlight');
+        rightDiv.classList.toggle('highlight');
+      });
+      // 行動裝置：touch 事件
+      leftDiv.addEventListener('touchstart', () => {
+        rightDiv.classList.add('show');
+        leftDiv.classList.add('highlight');
+        rightDiv.classList.add('highlight');
+      });
+      leftDiv.addEventListener('touchend', () => {
+        setTimeout(() => {
+          if(!bankShowAllAnswer) {
+            rightDiv.classList.remove('show');
+          }
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+        }, 300);
+      });
+      
+      // 同理：右側答案區也加入滑鼠與觸控事件
+      rightDiv.addEventListener('mouseenter', () => {
+        leftDiv.classList.add('highlight');
+        rightDiv.classList.add('highlight');
+      });
+      rightDiv.addEventListener('mouseleave', () => {
+        leftDiv.classList.remove('highlight');
+        rightDiv.classList.remove('highlight');
+      });
+      rightDiv.addEventListener('touchstart', () => {
+        leftDiv.classList.add('highlight');
+        rightDiv.classList.add('highlight');
+      });
+      rightDiv.addEventListener('touchend', () => {
+        setTimeout(() => {
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+        }, 300);
+      });
+    }
+
+    // 修改後的 showQuestionBank：
+    // 進入題庫檢視模式後，
     // 畫面僅顯示題庫內容，最上方固定控制鈕：
     // 「回題庫選單」、「回首頁」、「顯示所有答案」
     // 每頁 50 題，以 grid 方式左右分欄呈現，
@@ -583,7 +641,6 @@
         leftDiv.className = "bank-question";
         let leftContent = `<b>${item.index}. </b>${item.question}`;
         if(qtype === "選擇題"){
-          // 顯示各選項（依數字排序），不再顯示「答案: *」
           if(item.options && Object.keys(item.options).length > 0){
             leftContent += "<br/>";
             const sortedKeys = Object.keys(item.options).sort((a, b) => parseInt(a) - parseInt(b));
@@ -593,6 +650,7 @@
           }
         }
         leftDiv.innerHTML = leftContent;
+        
         // 右側欄：僅顯示正確答案；是非題顯示「是/否」，選擇題顯示正確答案數字
         const rightDiv = document.createElement('div');
         rightDiv.className = "bank-answer";
@@ -607,33 +665,9 @@
         } else {
           rightDiv.classList.remove('show');
         }
-        // 當滑鼠移入或點擊左側題目或右側答案時，同時提示（改變背景色）
-        leftDiv.addEventListener('mouseenter', () => {
-          rightDiv.classList.add('show');
-          leftDiv.classList.add('highlight');
-          rightDiv.classList.add('highlight');
-        });
-        leftDiv.addEventListener('mouseleave', () => {
-          if(!bankShowAllAnswer) {
-            rightDiv.classList.remove('show');
-          }
-          leftDiv.classList.remove('highlight');
-          rightDiv.classList.remove('highlight');
-        });
-        leftDiv.addEventListener('click', () => {
-          rightDiv.classList.toggle('show');
-          leftDiv.classList.toggle('highlight');
-          rightDiv.classList.toggle('highlight');
-        });
-        // 同理，若使用者將滑鼠移入右側答案，也提示左側題目
-        rightDiv.addEventListener('mouseenter', () => {
-          leftDiv.classList.add('highlight');
-          rightDiv.classList.add('highlight');
-        });
-        rightDiv.addEventListener('mouseleave', () => {
-          leftDiv.classList.remove('highlight');
-          rightDiv.classList.remove('highlight');
-        });
+        // 使用 addHighlightEvents 函式，統一針對滑鼠與觸控事件加入提示效果
+        addHighlightEvents(leftDiv, rightDiv);
+        
         contentDiv.appendChild(leftDiv);
         contentDiv.appendChild(rightDiv);
       });
