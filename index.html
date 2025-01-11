@@ -163,11 +163,6 @@
     .bank-answer:hover {
       color: #333;
     }
-    .bank-pagination {
-      margin-top: 10px;
-      text-align: center;
-    }
-    /* 固定下方的說明列 */
     .bank-footer {
       position: sticky;
       bottom: 0;
@@ -462,6 +457,8 @@
       BANK_CONTAINER.classList.remove('hidden');
       renderBankMenu();
       document.getElementById('bank-content').innerHTML = "";
+      // 當進入題庫檢視頁時，捲軸固定在頁面最上方，方便看到功能按鈕
+      window.scrollTo(0, 0);
     }
 
     // 題庫選單：顯示各縣市及題型按鈕
@@ -496,7 +493,7 @@
         rightDiv.classList.add('highlight');
       });
       leftDiv.addEventListener('mouseleave', () => {
-        // 如果不是使用點擊後切換的狀態，就還原
+        // 如果不是使用點擊後切換的狀態就還原
         if(!rightDiv.classList.contains('toggle')) {
           rightDiv.classList.remove('show');
           leftDiv.classList.remove('highlight');
@@ -504,10 +501,8 @@
         }
       });
       leftDiv.addEventListener('click', () => {
-        // 切換 toggle 狀態
         leftDiv.classList.toggle('toggle');
         rightDiv.classList.toggle('toggle');
-        // 依狀態決定是否顯示答案與底色
         if(rightDiv.classList.contains('toggle')) {
           rightDiv.classList.add('show');
           leftDiv.classList.add('highlight');
@@ -518,7 +513,6 @@
           rightDiv.classList.remove('highlight');
         }
       });
-
       // 對右側也做相同處理
       rightDiv.addEventListener('mouseenter', () => {
         leftDiv.classList.add('highlight');
@@ -543,8 +537,7 @@
           rightDiv.classList.remove('show');
         }
       });
-
-      // 行動裝置（觸控）事件：採用 touchend 避免 touchstart 造成預設捲動阻斷
+      // 行動裝置（觸控）事件：採用 touchend 避免 touchstart 造成捲動阻斷
       leftDiv.addEventListener('touchend', (e) => {
         e.preventDefault();
         leftDiv.classList.toggle('toggle');
@@ -575,7 +568,7 @@
       }, { passive: false });
     }
 
-    // 修改後的 showQuestionBank
+    // 修改後的 showQuestionBank：上方放置功能選單，下面才是題目列表與分頁資訊
     function showQuestionBank(region, qtype){
       const bankContent = document.getElementById('bank-content');
       bankContent.innerHTML = `
@@ -584,19 +577,19 @@
           <button class="btn" id="back-to-home">回首頁</button>
           <button class="btn" id="toggle-answer">顯示所有答案</button>
         </div>
-        <div id="bank-page-view" class="bank-page-container"></div>
+        <div id="bank-page-view"></div>
         <div class="bank-footer">移動或點擊題目會顯示答案</div>
       `;
       document.getElementById('back-to-menu').addEventListener('click', () => {
         renderBankMenu();
         bankContent.innerHTML = "";
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
       });
       document.getElementById('back-to-home').addEventListener('click', () => {
         BANK_CONTAINER.classList.add('hidden');
         HOME_CONTAINER.classList.remove('hidden');
         bankContent.innerHTML = "";
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
       });
       document.getElementById('toggle-answer').addEventListener('click', () => {
         bankShowAllAnswer = !bankShowAllAnswer;
@@ -613,44 +606,20 @@
       bankTotalPages = Math.ceil(bankAllData.length / 50);
       bankCurrentPage = 0;
       renderBankPage(qtype);
+      // 進入題庫檢視頁後，強制捲軸維持在最上方，讓使用者看到上方的功能按鈕
+      window.scrollTo(0, 0);
     }
 
-    // 題庫分頁函式
+    // 題庫分頁函式：題目列表在中間，下方顯示分頁資訊與按鈕
     function renderBankPage(qtype){
       const pageView = document.getElementById('bank-page-view');
       if(!pageView) return;
       pageView.innerHTML = "";
-      const paginationDiv = document.createElement('div');
-      paginationDiv.className = "bank-pagination";
-      paginationDiv.innerHTML = `第 ${bankCurrentPage + 1} 頁，共 ${bankTotalPages} 頁`;
-      pageView.appendChild(paginationDiv);
-      const navDiv = document.createElement('div');
-      navDiv.className = "bank-pagination";
-      if(bankCurrentPage > 0){
-        const prevBtn = document.createElement('button');
-        prevBtn.className = "btn";
-        prevBtn.textContent = "上一頁";
-        prevBtn.onclick = () => {
-          bankCurrentPage--;
-          renderBankPage(qtype);
-        };
-        navDiv.appendChild(prevBtn);
-      }
-      if(bankCurrentPage < bankTotalPages - 1){
-        const nextBtn = document.createElement('button');
-        nextBtn.className = "btn";
-        nextBtn.textContent = "下一頁";
-        nextBtn.onclick = () => {
-          bankCurrentPage++;
-          renderBankPage(qtype);
-        };
-        navDiv.appendChild(nextBtn);
-      }
-      pageView.appendChild(navDiv);
       // 本頁資料：每頁 50 題
       const start = bankCurrentPage * 50;
       const end = start + 50;
       const pageData = bankAllData.slice(start, end);
+      // 建立題目列表，採用兩欄式版型
       const contentDiv = document.createElement('div');
       contentDiv.className = "bank-content-page";
       pageData.forEach(item => {
@@ -689,7 +658,37 @@
         contentDiv.appendChild(rightDiv);
       });
       pageView.appendChild(contentDiv);
-      pageView.scrollIntoView({ behavior: 'smooth' });
+      // 下方添加分頁資訊與按鈕
+      const paginationContainer = document.createElement('div');
+      paginationContainer.className = "bank-pagination";
+      const pageInfo = document.createElement('div');
+      pageInfo.textContent = `第 ${bankCurrentPage + 1} 頁，共 ${bankTotalPages} 頁`;
+      paginationContainer.appendChild(pageInfo);
+      const navDiv = document.createElement('div');
+      if(bankCurrentPage > 0){
+        const prevBtn = document.createElement('button');
+        prevBtn.className = "btn";
+        prevBtn.textContent = "上一頁";
+        prevBtn.onclick = () => {
+          bankCurrentPage--;
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        navDiv.appendChild(prevBtn);
+      }
+      if(bankCurrentPage < bankTotalPages - 1){
+        const nextBtn = document.createElement('button');
+        nextBtn.className = "btn";
+        nextBtn.textContent = "下一頁";
+        nextBtn.onclick = () => {
+          bankCurrentPage++;
+          renderBankPage(qtype);
+          window.scrollTo(0, 0);
+        };
+        navDiv.appendChild(nextBtn);
+      }
+      paginationContainer.appendChild(navDiv);
+      pageView.appendChild(paginationContainer);
     }
 
     // 7. 開始測驗 (交通/地理)
@@ -878,7 +877,7 @@
         calcBtn.onclick = calculateScore;
         navEl.appendChild(calcBtn);
       }
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     }
     function getGlobalQuestionNumber(localIndex){
       if(!trafficMode){
@@ -991,10 +990,10 @@
       homeBtn.onclick = () => {
         RESULT_CONTAINER.classList.add('hidden');
         HOME_CONTAINER.classList.remove('hidden');
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
       };
       resDiv.appendChild(homeBtn);
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     }
     function showCorrections(){
       const resDiv = document.getElementById('result-area');
@@ -1071,7 +1070,7 @@
       homeBtn.onclick = () => {
         RESULT_CONTAINER.classList.add('hidden');
         HOME_CONTAINER.classList.remove('hidden');
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
       };
       resDiv.appendChild(homeBtn);
     }
@@ -1079,7 +1078,7 @@
       if(confirm("是否要回到首頁？")){
         RESULT_CONTAINER.classList.add('hidden');
         HOME_CONTAINER.classList.remove('hidden');
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
       } else {
         if(trafficMode) startTrafficTest();
         else startGeoTest();
