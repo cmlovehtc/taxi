@@ -141,22 +141,24 @@
     .bank-top-nav button {
       margin: 0 5px;
     }
+    /* 修改這裡，設定兩欄比例，左邊寬、右邊窄 */
     .bank-content-page {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: calc(100% - 80px) 80px;
       gap: 10px;
       padding: 10px;
       border-top: 1px solid #ccc;
     }
     .bank-question {
       padding: 5px;
-      border-right: 1px dashed #ccc;
+      /* 如果需要，可再針對左側額外設定 */
     }
     .bank-answer {
       padding: 5px;
       /* 預設隱藏答案 */
       color: transparent;
       transition: color 0.3s;
+      text-align: right; /* 靠右顯示 */
     }
     .bank-answer.show,
     .bank-answer:hover {
