@@ -151,14 +151,13 @@
     }
     .bank-question {
       padding: 5px;
-      /* 如果需要，可再針對左側額外設定 */
     }
     .bank-answer {
       padding: 5px;
       /* 預設隱藏答案 */
       color: transparent;
       transition: color 0.3s;
-      text-align: right; /* 靠右顯示 */
+      text-align: right;
     }
     .bank-answer.show,
     .bank-answer:hover {
@@ -178,9 +177,7 @@
       font-weight: bold;
       border-top: 1px solid #ccc;
     }
-    /* ------------------------------
-       新增：提示目前選取題目或答案的樣式
-       ------------------------------ */
+    /* 提示目前選取題目或答案的樣式 */
     .highlight {
       background-color: #fffae6;
     }
@@ -276,9 +273,9 @@
     let trafficMode = false;
     let currentPage = 0; // 用於一般測驗分頁
 
-    // 以下變數用於題庫檢視分頁
+    // 用於題庫檢視分頁
     let bankCurrentPage = 0;
-    let bankAllData = [];  // 儲存目前顯示的題庫資料（物件包含 { index, question, answer, options }）
+    let bankAllData = [];  // 儲存目前顯示的題庫資料（包含 { index, question, answer, options }）
     let bankTotalPages = 0;
     let bankShowAllAnswer = false; // 預設隱藏答案
 
@@ -467,7 +464,7 @@
       document.getElementById('bank-content').innerHTML = "";
     }
 
-    // 題庫選單：僅在題庫選單畫面顯示各縣市及題型按鈕
+    // 題庫選單：顯示各縣市及題型按鈕
     function renderBankMenu(){
       const bankMenuDiv = document.getElementById('bank-menu');
       bankMenuDiv.innerHTML = "";
@@ -490,46 +487,92 @@
       });
     }
 
-    // 新增：針對滑鼠與行動裝置事件，統一加入提示效果
+    // 調整事件函式，統一讓左、右欄位都能點擊後維持切換答案與 highlight 狀態
     function addHighlightEvents(leftDiv, rightDiv) {
-      // 桌機：滑鼠事件
+      // 桌機（滑鼠）事件：mouseenter、mouseleave 與 click 均適用
       leftDiv.addEventListener('mouseenter', () => {
         rightDiv.classList.add('show');
         leftDiv.classList.add('highlight');
         rightDiv.classList.add('highlight');
       });
       leftDiv.addEventListener('mouseleave', () => {
-        if(!bankShowAllAnswer) {
+        // 如果不是使用點擊後切換的狀態，就還原
+        if(!rightDiv.classList.contains('toggle')) {
           rightDiv.classList.remove('show');
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
         }
-        leftDiv.classList.remove('highlight');
-        rightDiv.classList.remove('highlight');
       });
       leftDiv.addEventListener('click', () => {
-        rightDiv.classList.toggle('show');
-        leftDiv.classList.toggle('highlight');
-        rightDiv.classList.toggle('highlight');
+        // 切換 toggle 狀態
+        leftDiv.classList.toggle('toggle');
+        rightDiv.classList.toggle('toggle');
+        // 依狀態決定是否顯示答案與底色
+        if(rightDiv.classList.contains('toggle')) {
+          rightDiv.classList.add('show');
+          leftDiv.classList.add('highlight');
+          rightDiv.classList.add('highlight');
+        } else {
+          rightDiv.classList.remove('show');
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+        }
       });
-      // 行動裝置：移除 preventDefault()，直接點選處理
-      leftDiv.addEventListener('touchstart', () => {
-        rightDiv.classList.toggle('show');
-        leftDiv.classList.toggle('highlight');
-        rightDiv.classList.toggle('highlight');
-      }, { passive: true });
-      
-      // 同理：右側答案區事件也調整
+
+      // 對右側也做相同處理
       rightDiv.addEventListener('mouseenter', () => {
         leftDiv.classList.add('highlight');
         rightDiv.classList.add('highlight');
       });
       rightDiv.addEventListener('mouseleave', () => {
-        leftDiv.classList.remove('highlight');
-        rightDiv.classList.remove('highlight');
+        if(!leftDiv.classList.contains('toggle')) {
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+        }
       });
-      rightDiv.addEventListener('touchstart', () => {
-        leftDiv.classList.toggle('highlight');
-        rightDiv.classList.toggle('highlight');
-      }, { passive: true });
+      rightDiv.addEventListener('click', () => {
+        leftDiv.classList.toggle('toggle');
+        rightDiv.classList.toggle('toggle');
+        if(leftDiv.classList.contains('toggle')) {
+          leftDiv.classList.add('highlight');
+          rightDiv.classList.add('highlight');
+          rightDiv.classList.add('show');
+        } else {
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+          rightDiv.classList.remove('show');
+        }
+      });
+
+      // 行動裝置（觸控）事件：採用 touchend 避免 touchstart 造成預設捲動阻斷
+      leftDiv.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        leftDiv.classList.toggle('toggle');
+        rightDiv.classList.toggle('toggle');
+        if(rightDiv.classList.contains('toggle')) {
+          rightDiv.classList.add('show');
+          leftDiv.classList.add('highlight');
+          rightDiv.classList.add('highlight');
+        } else {
+          rightDiv.classList.remove('show');
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+        }
+      }, { passive: false });
+      rightDiv.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        leftDiv.classList.toggle('toggle');
+        rightDiv.classList.toggle('toggle');
+        if(leftDiv.classList.contains('toggle')) {
+          leftDiv.classList.add('highlight');
+          rightDiv.classList.add('highlight');
+          rightDiv.classList.add('show');
+        } else {
+          leftDiv.classList.remove('highlight');
+          rightDiv.classList.remove('highlight');
+          rightDiv.classList.remove('show');
+        }
+      }, { passive: false });
     }
 
     // 修改後的 showQuestionBank
@@ -604,14 +647,14 @@
         navDiv.appendChild(nextBtn);
       }
       pageView.appendChild(navDiv);
-      // 本頁資料
+      // 本頁資料：每頁 50 題
       const start = bankCurrentPage * 50;
       const end = start + 50;
       const pageData = bankAllData.slice(start, end);
       const contentDiv = document.createElement('div');
       contentDiv.className = "bank-content-page";
       pageData.forEach(item => {
-        // 左側欄：題目與選項（若是選擇題）或僅題目（是非題）
+        // 左側欄：題目與選項（若為選擇題）或僅題目（是非題）
         const leftDiv = document.createElement('div');
         leftDiv.className = "bank-question";
         let leftContent = `<b>${item.index}. </b>${item.question}`;
