@@ -226,7 +226,6 @@
     <!-- 題庫選單 & 內容容器 (Bank) -->
     <div id="bank-container" class="hidden">
       <h2>查看題庫選單</h2>
-      <!-- 修改後的說明文字 -->
       <div id="bank-menu"></div>
       <hr>
       <div id="bank-content"></div>
@@ -459,7 +458,6 @@
     }
 
     // 6. 題庫檢視功能
-    // 點選「查看題庫」後切換到題庫區
     function showBankMenu(){
       HOME_CONTAINER.classList.add('hidden');
       QUIZ_CONTAINER.classList.add('hidden');
@@ -483,7 +481,6 @@
           btn.onclick = () => {
             bankCurrentPage = 0;
             bankShowAllAnswer = false;
-            // 點選後隱藏題庫選單按鈕區
             bankMenuDiv.innerHTML = "";
             showQuestionBank(region, qtype);
           };
@@ -513,16 +510,14 @@
         leftDiv.classList.toggle('highlight');
         rightDiv.classList.toggle('highlight');
       });
-      // 行動裝置：touch事件改為直接點選效果（不在touchend時移除）
-      leftDiv.addEventListener('touchstart', (e) => {
-        // 取消預設行為避免重複觸發
-        e.preventDefault();
+      // 行動裝置：移除 preventDefault()，直接點選處理
+      leftDiv.addEventListener('touchstart', () => {
         rightDiv.classList.toggle('show');
         leftDiv.classList.toggle('highlight');
         rightDiv.classList.toggle('highlight');
-      });
+      }, { passive: true });
       
-      // 同理：右側答案區事件也調整為直接點選效果
+      // 同理：右側答案區事件也調整
       rightDiv.addEventListener('mouseenter', () => {
         leftDiv.classList.add('highlight');
         rightDiv.classList.add('highlight');
@@ -531,21 +526,13 @@
         leftDiv.classList.remove('highlight');
         rightDiv.classList.remove('highlight');
       });
-      rightDiv.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+      rightDiv.addEventListener('touchstart', () => {
         leftDiv.classList.toggle('highlight');
         rightDiv.classList.toggle('highlight');
-      });
+      }, { passive: true });
     }
 
-    // 修改後的 showQuestionBank：
-    // 進入題庫檢視模式後，
-    // 畫面僅顯示題庫內容，最上方固定控制鈕：
-    // 「回題庫選單」、「回首頁」、「顯示所有答案」
-    // 每頁 50 題，以 grid 方式左右分欄呈現，
-    // 左側欄：若是選擇題則顯示題目與所有選項；是非題則僅顯示題目。
-    // 右側欄：僅顯示正確答案；（移動或點擊左側欄時自動顯示對應答案）
-    // 下方固定顯示說明：移動或點擊題目會顯示答案。
+    // 修改後的 showQuestionBank
     function showQuestionBank(region, qtype){
       const bankContent = document.getElementById('bank-content');
       bankContent.innerHTML = `
@@ -574,7 +561,7 @@
         toggleBtn.textContent = bankShowAllAnswer ? "隱藏所有答案" : "顯示所有答案";
         renderBankPage(qtype);
       });
-      // 準備資料：取出該縣市、該題型題庫資料（依原順序）
+      // 準備資料
       let arr = questions[region][qtype];
       bankAllData = [];
       arr.forEach((qObj, idx) => {
@@ -585,12 +572,11 @@
       renderBankPage(qtype);
     }
 
-    // 題庫分頁函式，參數 qtype 用以決定左右欄呈現內容
+    // 題庫分頁函式
     function renderBankPage(qtype){
       const pageView = document.getElementById('bank-page-view');
       if(!pageView) return;
       pageView.innerHTML = "";
-      // 分頁資訊及上下頁按鈕
       const paginationDiv = document.createElement('div');
       paginationDiv.className = "bank-pagination";
       paginationDiv.innerHTML = `第 ${bankCurrentPage + 1} 頁，共 ${bankTotalPages} 頁`;
@@ -618,15 +604,14 @@
         navDiv.appendChild(nextBtn);
       }
       pageView.appendChild(navDiv);
-      // 本頁資料：每頁 50 題
+      // 本頁資料
       const start = bankCurrentPage * 50;
       const end = start + 50;
       const pageData = bankAllData.slice(start, end);
-      // 使用 grid 以左右分欄呈現
       const contentDiv = document.createElement('div');
       contentDiv.className = "bank-content-page";
       pageData.forEach(item => {
-        // 左側欄：若是選擇題則顯示題目與所有選項；是非題則僅顯示題目。
+        // 左側欄：題目與選項（若是選擇題）或僅題目（是非題）
         const leftDiv = document.createElement('div');
         leftDiv.className = "bank-question";
         let leftContent = `<b>${item.index}. </b>${item.question}`;
@@ -641,7 +626,7 @@
         }
         leftDiv.innerHTML = leftContent;
         
-        // 右側欄：僅顯示正確答案；是非題顯示「是/否」，選擇題顯示正確答案數字
+        // 右側欄：正確答案
         const rightDiv = document.createElement('div');
         rightDiv.className = "bank-answer";
         if(qtype === "選擇題"){
@@ -655,7 +640,6 @@
         } else {
           rightDiv.classList.remove('show');
         }
-        // 使用 addHighlightEvents 函式，統一針對滑鼠與觸控事件加入提示效果
         addHighlightEvents(leftDiv, rightDiv);
         
         contentDiv.appendChild(leftDiv);
@@ -805,7 +789,6 @@
         }
       }
       titleEl.textContent = pageTitle;
-      // 生成題目與回填
       questionsList.forEach((qObj, idx) => {
         const globalQNum = getGlobalQuestionNumber(idx);
         const block = document.createElement('div');
