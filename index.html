@@ -513,23 +513,16 @@
         leftDiv.classList.toggle('highlight');
         rightDiv.classList.toggle('highlight');
       });
-      // 行動裝置：touch 事件
-      leftDiv.addEventListener('touchstart', () => {
-        rightDiv.classList.add('show');
-        leftDiv.classList.add('highlight');
-        rightDiv.classList.add('highlight');
-      });
-      leftDiv.addEventListener('touchend', () => {
-        setTimeout(() => {
-          if(!bankShowAllAnswer) {
-            rightDiv.classList.remove('show');
-          }
-          leftDiv.classList.remove('highlight');
-          rightDiv.classList.remove('highlight');
-        }, 300);
+      // 行動裝置：touch事件改為直接點選效果（不在touchend時移除）
+      leftDiv.addEventListener('touchstart', (e) => {
+        // 取消預設行為避免重複觸發
+        e.preventDefault();
+        rightDiv.classList.toggle('show');
+        leftDiv.classList.toggle('highlight');
+        rightDiv.classList.toggle('highlight');
       });
       
-      // 同理：右側答案區也加入滑鼠與觸控事件
+      // 同理：右側答案區事件也調整為直接點選效果
       rightDiv.addEventListener('mouseenter', () => {
         leftDiv.classList.add('highlight');
         rightDiv.classList.add('highlight');
@@ -538,15 +531,10 @@
         leftDiv.classList.remove('highlight');
         rightDiv.classList.remove('highlight');
       });
-      rightDiv.addEventListener('touchstart', () => {
-        leftDiv.classList.add('highlight');
-        rightDiv.classList.add('highlight');
-      });
-      rightDiv.addEventListener('touchend', () => {
-        setTimeout(() => {
-          leftDiv.classList.remove('highlight');
-          rightDiv.classList.remove('highlight');
-        }, 300);
+      rightDiv.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        leftDiv.classList.toggle('highlight');
+        rightDiv.classList.toggle('highlight');
       });
     }
 
