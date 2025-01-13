@@ -1,97 +1,246 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <!-- 手機RWD -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>地理環境 &amp; 交通法規測驗｜計程車考試｜台灣計程車模擬考｜執業登記證考試</title>
   <!-- 新增搜尋引擎關鍵字 -->
   <meta name="keywords" content="地理環境, 交通法規, 計程車考試, 台灣計程車模擬考, 執業登記證考試, 智能題庫隨行, 題庫檢視, 全國首創">
+  <!-- 引入 Google Fonts (可自行換其他字體) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap">
+
+  <!-- 1) 引入 jsPDF 與 jsPDF-AutoTable (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- 2) 引入繁體中文字型 (將 Base64 版的 NotoSansTC-Regular-normal.js 放同資料夾) -->
+  <script src="NotoSansTC-Regular-normal.js"></script>
+
   <style>
-    /* 基本版型 */
+    /* 
+     * 全局樣式 
+     * ---------------------------------------------------------- */
     body {
-      font-family: sans-serif;
-      background: #f8fafc;
+      font-family: 'Noto Sans TC', sans-serif;
+      background: #f3f7fa;
       margin: 0;
       padding: 0;
+      color: #333;
+      line-height: 1.6;
     }
+    h1, h2, h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    a {
+      text-decoration: none;
+      color: #007bff;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* 
+     * 容器、按鈕、版面 
+     * ---------------------------------------------------------- */
     .container {
       max-width: 1000px;
       margin: auto;
-      background: #ffffff;
+      background: #fff;
       padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h1, h2, h3 {
-      color: #333;
-      margin-top: 0;
+      box-shadow: 0 0 12px rgba(0,0,0,0.08);
     }
     .btn {
       display: inline-block;
-      padding: 8px 15px;
-      margin: 5px 0;
+      padding: 10px 16px;
+      margin: 5px 5px 5px 0;
       color: #fff;
-      background-color: #1c4966;
+      background-color: #006699;
       border-radius: 4px;
       text-decoration: none;
       cursor: pointer;
       border: none;
+      font-size: 14px;
     }
     .btn:hover {
-      background-color: #16667a;
-    }
-    .region-row {
-      margin-bottom: 8px;
-    }
-    .question-block {
-      border: 1px solid #ccc;
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 4px;
-      word-wrap: break-word;
-      white-space: pre-wrap;
+      background-color: #004d66;
     }
     .footer {
       margin-top: 20px;
       padding: 10px;
       text-align: center;
       background: #eef4f9;
+      font-size: 14px;
+      border-radius: 4px;
     }
-    .result {
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin: 10px 0;
-    }
-    .wrong {
-      color: red;
-    }
-    .correct {
-      color: green;
+
+    /*
+     * 首頁與題庫選單
+     * ---------------------------------------------------------- */
+    #home-container, #bank-container, #quiz-container, #result-container {
+      margin-top: 20px;
     }
     .hidden {
       display: none;
     }
+
+    /* 
+     * 縣市比例輸入 
+     * ---------------------------------------------------------- */
+    .region-row {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 300px;
+    }
+    .region-row label {
+      flex: 1;
+    }
+    .region-row input {
+      width: 60px;
+      margin-left: 10px;
+      padding: 4px;
+    }
+
+    /*
+     * 勾選框區域 
+     * ---------------------------------------------------------- */
+    #region-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    #region-checkboxes label {
+      width: 33.33%;
+      box-sizing: border-box;
+      padding: 5px 0;
+      font-size: 14px;
+    }
+    @media (max-width: 600px) {
+      #region-checkboxes label {
+        width: 50%;
+      }
+    }
+
+    /*
+     * 顯示統計資訊的表格
+     * ---------------------------------------------------------- */
     .stats-table {
       border-collapse: collapse;
       margin: 10px 0;
+      width: 100%;
     }
     .stats-table th,
     .stats-table td {
       border: 1px solid #ccc;
       padding: 6px 8px;
+      text-align: center;
     }
     .stats-table th {
       background: #f0f0f0;
     }
-    .scroll-box {
-      border: 1px solid #ccc;
+
+    /* 
+     * 題庫檢視頁 
+     * ---------------------------------------------------------- */
+    .bank-top-nav, .bank-sort-nav {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .bank-top-nav button, .bank-sort-nav button {
+      margin: 5px 8px;
+      font-size: 14px;
+      padding: 6px 12px;
+    }
+    .bank-footer {
+      background: #eef4f9;
       padding: 10px;
-      max-height: 400px;
-      overflow-y: auto;
-      margin: 10px 0;
+      text-align: center;
+      font-weight: bold;
+      margin-top: 10px;
       border-radius: 4px;
     }
-    /* 載入指示器 */
+
+    /* 
+     * 兩欄 (題目/答案) 
+     * ---------------------------------------------------------- */
+    .bank-content-page {
+      display: grid;
+      grid-template-columns: calc(100% - 20px) 20px;
+      gap: 10px;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+    }
+    .bank-question {
+      padding: 5px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .bank-answer {
+      padding: 5px;
+      color: transparent; /* 預設隱藏答案 */
+      transition: color 0.3s;
+      text-align: right;
+    }
+    .bank-answer.show,
+    .bank-answer:hover {
+      color: #333;
+    }
+    .highlight {
+      background-color: #fffae6;
+    }
+    .bank-question:hover,
+    .bank-answer:hover {
+      cursor: pointer;
+    }
+
+    /* 
+     * 分頁按鈕 
+     * ---------------------------------------------------------- */
+    .bank-pagination {
+      margin: 10px 0;
+      text-align: center;
+    }
+
+    /* 
+     * 測驗頁面 (Quiz) 
+     * ---------------------------------------------------------- */
+    .question-block {
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      word-wrap: break-word;
+      background: #f8fafc;
+    }
+    #quiz-nav {
+      text-align: center;
+    }
+
+    /* 
+     * 結果頁 (Result) 
+     * ---------------------------------------------------------- */
+    .result {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 10px 0;
+      text-align: center;
+    }
+    .wrong {
+      color: red;
+      font-weight: bold;
+    }
+    .correct {
+      color: green;
+      font-weight: bold;
+    }
+
+    /* 
+     * 載入指示器 
+     * ---------------------------------------------------------- */
     #loading-indicator {
       position: fixed;
       top: 50%;
@@ -104,95 +253,10 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       z-index: 1000;
     }
-    /* 縣市選項，每行三個 */
-    #region-checkboxes {
-      display: flex;
-      flex-wrap: wrap;
-    }
-    #region-checkboxes label {
-      width: 33.33%;
-      box-sizing: border-box;
-      padding: 5px 0;
-    }
-    @media (max-width: 600px) {
-      .container {
-        margin: 0 10px;
-        box-shadow: none;
-      }
-      .question-block {
-        font-size: 16px;
-      }
-      .btn {
-        font-size: 14px;
-      }
-      #region-checkboxes label {
-        width: 50%;
-      }
-    }
-    /* 題庫檢視區樣式 */
-    .bank-page-container {
-      display: flex;
-      flex-direction: column;
-    }
-    .bank-top-nav {
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    .bank-top-nav button {
-      margin: 0 5px;
-    }
-    /* 新增排序用的按鈕區 */
-    .bank-sort-nav {
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    .bank-sort-nav button {
-      margin: 0 4px;
-      font-size: 0.9rem;
-      padding: 5px 10px;
-    }
-    /* 修改這裡，設定兩欄比例，左邊寬、右邊窄 */
-    .bank-content-page {
-      display: grid;
-      grid-template-columns: calc(100% - 20px) 20px;
-      gap: 10px;
-      padding: 10px;
-      border-top: 1px solid #ccc;
-    }
-    .bank-question {
-      padding: 5px;
-    }
-    .bank-answer {
-      padding: 5px;
-      /* 預設隱藏答案 */
-      color: transparent;
-      transition: color 0.3s;
-      text-align: right;
-    }
-    .bank-answer.show,
-    .bank-answer:hover {
-      color: #333;
-    }
-    .bank-footer {
-      position: sticky;
-      bottom: 0;
-      background: #eef4f9;
-      padding: 5px;
-      text-align: center;
-      font-weight: bold;
-      border-top: 1px solid #ccc;
-    }
-    /* 提示目前選取題目或答案的樣式 */
-    .highlight {
-      background-color: #fffae6;
-    }
-    .bank-question:hover,
-    .bank-answer:hover {
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
+
   <div class="container">
     <!-- 載入指示器 -->
     <div id="loading-indicator" class="hidden">
@@ -203,7 +267,10 @@
     <div id="home-container">
       <h1>全國版 地理環境 &amp; 交通法規測驗</h1>
       <h2>計程車考試｜台灣計程車模擬考｜執業登記證考試</h2>
-      <p>全國首創 <strong>智能題庫隨行</strong> 機制，讓您在檢視題庫時，移動或點擊題目即可即時顯示正確答案，提供最佳考前複習體驗！</p>
+      <p>
+        全國首創 <strong>智能題庫隨行</strong> 機制，讓您在檢視題庫時，移動或點擊題目即可即時顯示正確答案，提供最佳考前複習體驗！
+      </p>
+      
       <h3>請輸入各縣市的比例 (總和=100)</h3>
       <div id="region-inputs"></div>
       <div style="margin-top:10px;">
@@ -211,17 +278,20 @@
         <button class="btn" id="start-traffic">開始交通法規測驗（50題）</button>
         <button class="btn" id="view-bank-menu">查看題庫</button>
       </div>
+
       <h3>選擇要包含的縣市</h3>
       <div id="region-checkboxes"></div>
       <button class="btn" id="calculate-stats">計算統計</button>
+
       <h3>各縣市題庫數量及統計</h3>
       <div id="stats-info" class="hidden"></div>
+
       <div class="footer">
         郭建隆自動出題程式祝大家考試順利<br>
         更新日期:2025/1/12日<br>
         郭建隆版權所有<br>
         聯絡作者: cmlovehtc@gmail.com<br>
-        LINE: cmlovehtc(歡迎加LINE提供你考試密技，計程車車隊分析)
+        LINE: cmlovehtc (歡迎加LINE提供你考試密技，計程車車隊分析)
       </div>
     </div>
 
@@ -244,10 +314,13 @@
     <div id="result-container" class="hidden">
       <div id="result-area"></div>
     </div>
-  </div>
+
+  </div> <!-- /.container -->
 
   <script>
-    // 1. 全域變數、初始設定
+    /*
+     * 1. 全域變數、初始設定
+     * ---------------------------------------------------------- */
     const REGIONS = [
       "基隆市","宜蘭縣","新北市","桃園市","新竹市",
       "新竹縣","苗栗縣","臺北市","臺中市","南投縣",
@@ -263,7 +336,7 @@
     const BANK_CONTAINER   = document.getElementById('bank-container');
     const LOADING_INDICATOR = document.getElementById('loading-indicator');
 
-    // questions[region] = { "是非題": [...], "選擇題": [...] }
+    // questions[region] = { "是非題": [...], "選擇題": [] }
     let questions = {};
     REGIONS.forEach(r => {
       questions[r] = { "是非題": [], "選擇題": [] };
@@ -272,26 +345,32 @@
 
     let proportions = {};
     let selectedQuestions = { "是非題": [], "選擇題": [] };
-    let userAnswers = {};   // key: 全卷題號, val: 使用者選的選項數字
-    let correctAnswers = {}; // key: 全卷題號, val: 正確選項
+    let userAnswers = {};      // key: 全卷題號, val: 使用者選的選項數字
+    let correctAnswers = {};   // key: 全卷題號, val: 正確選項
     let score = 0;
     let trafficMode = false;
     let currentPage = 0; // 用於一般測驗分頁
 
-    // 用於題庫檢視分頁
+    // 題庫檢視分頁 & PDF 需要的資料
     let bankCurrentPage = 0;
     let bankAllData = [];  // 儲存目前顯示的題庫資料（包含 { index, question, answer, options }）
     let bankTotalPages = 0;
     let bankShowAllAnswer = false; // 預設隱藏答案
 
-    // 2. 建立「輸入比例」區 & 綁定按鈕
+    // 用於記錄「目前使用者檢視的縣市」和「目前排序方式」(給 PDF 命名)
+    let selectedRegion = "";
+    let currentSortMethod = "題號排序"; // 可以自定初始排序名稱
+
+    /*
+     * 2. 建立「輸入比例」區 & 綁定按鈕
+     * ---------------------------------------------------------- */
     const regionInputsDiv = document.getElementById('region-inputs');
     REGIONS.forEach(r => {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'region-row';
       rowDiv.innerHTML = `
         <label>${r}</label>
-        <input type="number" id="prop-${r}" value="0" style="width:60px; margin-left:10px;">
+        <input type="number" id="prop-${r}" value="0">
       `;
       regionInputsDiv.appendChild(rowDiv);
     });
@@ -301,13 +380,16 @@
     document.getElementById('view-bank-menu').addEventListener('click', showBankMenu);
     document.getElementById('calculate-stats').addEventListener('click', renderStatsInfo);
 
+    // 載入題庫
     window.addEventListener('DOMContentLoaded', async () => {
       await loadAllQuestions();
       renderRegionCheckboxes();
       renderBankMenu();
     });
 
-    // 3. 載入題庫 (平行載入所有 TXT 檔案)
+    /*
+     * 3. 載入題庫 (平行載入所有 TXT 檔案)
+     * ---------------------------------------------------------- */
     async function loadAllQuestions() {
       LOADING_INDICATOR.classList.remove('hidden');
       const fetchPromises = [];
@@ -389,7 +471,9 @@
       });
     }
 
-    // 4. 建立勾選框
+    /*
+     * 4. 建立勾選框 (統計)
+     * ---------------------------------------------------------- */
     function renderRegionCheckboxes() {
       const checkboxDiv = document.getElementById('region-checkboxes');
       checkboxDiv.innerHTML = "";
@@ -400,7 +484,9 @@
       });
     }
 
-    // 5. 統計資訊
+    /*
+     * 5. 統計資訊
+     * ---------------------------------------------------------- */
     function renderStatsInfo() {
       const statsDiv = document.getElementById('stats-info');
       statsDiv.innerHTML = "";
@@ -459,7 +545,9 @@
       statsDiv.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // 6. 題庫檢視功能
+    /*
+     * 6. 題庫檢視功能 + PDF 產生 (含中文字型 & 只第一頁表頭)
+     * ---------------------------------------------------------- */
     function showBankMenu(){
       HOME_CONTAINER.classList.add('hidden');
       QUIZ_CONTAINER.classList.add('hidden');
@@ -467,11 +555,10 @@
       BANK_CONTAINER.classList.remove('hidden');
       renderBankMenu();
       document.getElementById('bank-content').innerHTML = "";
-      // 當進入題庫檢視頁時，捲軸固定在頁面最上方
       window.scrollTo(0, 0);
     }
 
-    // 題庫選單：顯示各縣市及題型按鈕
+    // 顯示各縣市及題型按鈕
     function renderBankMenu(){
       const bankMenuDiv = document.getElementById('bank-menu');
       bankMenuDiv.innerHTML = "";
@@ -485,6 +572,7 @@
           btn.onclick = () => {
             bankCurrentPage = 0;
             bankShowAllAnswer = false;
+            selectedRegion = region; // 記錄當前選擇的縣市 (用於 PDF 命名)
             bankMenuDiv.innerHTML = "";
             showQuestionBank(region, qtype);
           };
@@ -494,9 +582,9 @@
       });
     }
 
-    // 調整事件函式，統一讓左、右欄位都能點擊後維持切換答案與 highlight 狀態
+    // 事件：hover, click, touch → 顯示答案 & highlight
     function addHighlightEvents(leftDiv, rightDiv) {
-      // 桌機（滑鼠）事件：mouseenter、mouseleave 與 click 均適用
+      // 滑鼠事件
       leftDiv.addEventListener('mouseenter', () => {
         rightDiv.classList.add('show');
         leftDiv.classList.add('highlight');
@@ -522,7 +610,7 @@
           rightDiv.classList.remove('highlight');
         }
       });
-      // 對右側也做相同處理
+      // 同樣對右側做處理
       rightDiv.addEventListener('mouseenter', () => {
         leftDiv.classList.add('highlight');
         rightDiv.classList.add('highlight');
@@ -577,19 +665,94 @@
       }, { passive: false });
     }
 
-    // 在原有功能選單上增加排序按鈕區 (bank-sort-nav)
-    // 根據題型呈現不同的排序選項
+    // 新的 generatePDF 函式： 可動態帶入 region, qtype, sortMethod
+    function generatePDF(region, qtype, sortMethod) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'pt',
+        format: 'A4'
+      });
+
+      // 1) 加入我們的 Base64 字型
+      doc.addFileToVFS("NotoSansTC-Regular.ttf", NotoSansTCRegular);
+      doc.addFont("NotoSansTC-Regular.ttf", "NotoSansTC", "normal");
+      doc.setFont("NotoSansTC", "normal");
+      doc.setTextColor(0, 0, 0);
+
+      // 2) 準備 AutoTable 的資料
+      let tableData = bankAllData.map(item => {
+        let questionStr = item.index + ". " + item.question;
+        if (qtype === '選擇題' && item.options && Object.keys(item.options).length > 0) {
+          const sortedKeys = Object.keys(item.options).sort((a, b) => parseInt(a) - parseInt(b));
+          sortedKeys.forEach(k => {
+            questionStr += ` ( ${k} ) ${item.options[k]}`;
+          });
+        }
+
+        let ansStr = "";
+        if (qtype === '選擇題') {
+          ansStr = item.answer.toString();
+        } else {
+          ansStr = (item.answer === 1) ? "是" : "否";
+        }
+
+        return { question: questionStr, answer: ansStr };
+      });
+
+      // 3) 產生表格 - 只在第一頁出現表頭, 第二欄(答案)置中
+      doc.autoTable({
+        columns: [
+          { header: '題目', dataKey: 'question' },
+          { header: '答案', dataKey: 'answer' }
+        ],
+        body: tableData,
+        startY: 20,
+        margin: { left: 20, right: 20 },
+        repeatHeaders: 'firstPage',  // 只在第一頁重複表頭
+
+        headStyles: {
+          fillColor: [238, 244, 249],
+          textColor: 50,
+          lineWidth: 0.1,
+          font: "NotoSansTC",
+          fontSize: 8,
+          halign: 'center',  // 表頭置中
+        },
+        bodyStyles: {
+          lineWidth: 0.1,
+          font: "NotoSansTC",
+          fontSize: 8,
+          textColor: [0, 0, 0],
+          cellPadding: 2,
+        },
+        styles: {
+          overflow: 'linebreak',
+          lineHeight: 1,
+        },
+        // 第二欄置中
+        columnStyles: {
+          answer: { halign: 'center' }
+        },
+      });
+
+      // 4) 動態檔名
+      // 例如：「臺北市__地理環境_是非題_題號排序.pdf」
+      const fileName = `${region}__地理環境_${qtype}_${sortMethod}.pdf`;
+      doc.save(fileName);
+    }
+
+    // 根據題型產生排序按鈕區，並在按鈕上記錄目前「排序方式」，之後產 PDF 時帶入
     function renderSortNav(qtype) {
       const sortNav = document.createElement('div');
       sortNav.className = "bank-sort-nav";
-      // 清空先前的排序選項，再新增按鈕
+
       if(qtype === "是非題") {
-        // 依答案是排序
         let sortYesBtn = document.createElement('button');
         sortYesBtn.className = "btn";
         sortYesBtn.textContent = "答案是排序";
         sortYesBtn.onclick = () => {
-          // 將答案為「是」 (answer===1) 的題目排前面
+          currentSortMethod = "答案是排序";
           bankAllData.sort((a, b) => {
             if(a.answer === b.answer) return a.index - b.index;
             return (a.answer === 1) ? -1 : (b.answer === 1) ? 1 : 0;
@@ -598,12 +761,12 @@
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sortYesBtn);
-        // 依答案否排序
+
         let sortNoBtn = document.createElement('button');
         sortNoBtn.className = "btn";
         sortNoBtn.textContent = "答案否排序";
         sortNoBtn.onclick = () => {
-          // 將答案為「否」 (answer===2) 的題目排前面
+          currentSortMethod = "答案否排序";
           bankAllData.sort((a, b) => {
             if(a.answer === b.answer) return a.index - b.index;
             return (a.answer === 2) ? -1 : (b.answer === 2) ? 1 : 0;
@@ -612,22 +775,24 @@
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sortNoBtn);
-        // 依題號排序 (原始順序：根據 index 升冪排序)
+
         let sortIndexBtn = document.createElement('button');
         sortIndexBtn.className = "btn";
         sortIndexBtn.textContent = "題號排序";
         sortIndexBtn.onclick = () => {
+          currentSortMethod = "題號排序";
           bankAllData.sort((a, b) => a.index - b.index);
           renderBankPage(qtype);
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sortIndexBtn);
-      } else if(qtype === "選擇題") {
-        // 依答案選項 1 排序
+      }
+      else if(qtype === "選擇題") {
         let sort1Btn = document.createElement('button');
         sort1Btn.className = "btn";
         sort1Btn.textContent = "1排序";
         sort1Btn.onclick = () => {
+          currentSortMethod = "1排序";
           bankAllData.sort((a, b) => {
             if(a.answer === b.answer) return a.index - b.index;
             return (a.answer === 1) ? -1 : (b.answer === 1) ? 1 : 0;
@@ -636,11 +801,12 @@
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sort1Btn);
-        // 依答案選項 2 排序
+
         let sort2Btn = document.createElement('button');
         sort2Btn.className = "btn";
         sort2Btn.textContent = "2排序";
         sort2Btn.onclick = () => {
+          currentSortMethod = "2排序";
           bankAllData.sort((a, b) => {
             if(a.answer === b.answer) return a.index - b.index;
             return (a.answer === 2) ? -1 : (b.answer === 2) ? 1 : 0;
@@ -649,11 +815,12 @@
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sort2Btn);
-        // 依答案選項 3 排序
+
         let sort3Btn = document.createElement('button');
         sort3Btn.className = "btn";
         sort3Btn.textContent = "3排序";
         sort3Btn.onclick = () => {
+          currentSortMethod = "3排序";
           bankAllData.sort((a, b) => {
             if(a.answer === b.answer) return a.index - b.index;
             return (a.answer === 3) ? -1 : (b.answer === 3) ? 1 : 0;
@@ -662,21 +829,31 @@
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sort3Btn);
-        // 依題號排序
+
         let sortIndexBtn = document.createElement('button');
         sortIndexBtn.className = "btn";
         sortIndexBtn.textContent = "題號排序";
         sortIndexBtn.onclick = () => {
+          currentSortMethod = "題號排序";
           bankAllData.sort((a, b) => a.index - b.index);
           renderBankPage(qtype);
           window.scrollTo(0, 0);
         };
         sortNav.appendChild(sortIndexBtn);
       }
+
+      // 產生 PDF 按鈕
+      let pdfBtn = document.createElement('button');
+      pdfBtn.className = "btn";
+      pdfBtn.textContent = "產生 PDF";
+      pdfBtn.style.marginLeft = "20px";
+      // 記得帶入選擇的地區, qtype, 以及目前的排序方式
+      pdfBtn.onclick = () => generatePDF(selectedRegion, qtype, currentSortMethod);
+      sortNav.appendChild(pdfBtn);
+
       return sortNav;
     }
 
-    // 修改後的 showQuestionBank：上方放置功能選單與排序按鈕區，下面才是題目列表與分頁資訊
     function showQuestionBank(region, qtype){
       const bankContent = document.getElementById('bank-content');
       bankContent.innerHTML = `
@@ -707,16 +884,16 @@
         renderBankPage(qtype);
         window.scrollTo(0, 0);
       });
+
       // 加入排序按鈕區
       const sortArea = document.getElementById('bank-sort-area');
       sortArea.innerHTML = "";
       sortArea.appendChild(renderSortNav(qtype));
       
-      // 準備資料：記錄原始題號
+      // 整理 bankAllData
       let arr = questions[region][qtype];
       bankAllData = [];
       arr.forEach((qObj, idx) => {
-        // 直接記錄原始順序到 index 屬性（此 index 為原始題號）
         bankAllData.push(Object.assign({ index: idx + 1 }, qObj));
       });
       bankTotalPages = Math.ceil(bankAllData.length / 50);
@@ -725,42 +902,38 @@
       window.scrollTo(0, 0);
     }
 
-    // 題庫分頁函式：題目列表在中間，下方顯示分頁資訊與按鈕
     function renderBankPage(qtype){
       const pageView = document.getElementById('bank-page-view');
       if(!pageView) return;
       pageView.innerHTML = "";
-      // 本頁資料：每頁 50 題
       const start = bankCurrentPage * 50;
       const end = start + 50;
       const pageData = bankAllData.slice(start, end);
-      // 建立題目列表，採用兩欄式版型
+
       const contentDiv = document.createElement('div');
       contentDiv.className = "bank-content-page";
+
       pageData.forEach(item => {
-        // 左側欄：題目與選項（若為選擇題）或僅題目（是非題）
+        // 左側欄：題目
         const leftDiv = document.createElement('div');
         leftDiv.className = "bank-question";
-        let leftContent = `<b>${item.index}. </b>${item.question}`;
-        if(qtype === "選擇題"){
-          if(item.options && Object.keys(item.options).length > 0){
-            leftContent += "<br/>";
-            const sortedKeys = Object.keys(item.options).sort((a, b) => parseInt(a) - parseInt(b));
-            sortedKeys.forEach(k => {
-              leftContent += `(${k}) ${item.options[k]}<br/>`;
-            });
-          }
+        let leftContent = `${item.index}. ${item.question}`;
+        if(qtype === "選擇題" && item.options && Object.keys(item.options).length > 0){
+          leftContent += "\n";
+          const sortedKeys = Object.keys(item.options).sort((a, b) => parseInt(a) - parseInt(b));
+          sortedKeys.forEach(k => {
+            leftContent += `(${k}) ${item.options[k]}\n`;
+          });
         }
-        leftDiv.innerHTML = leftContent;
-        
-        // 右側欄：正確答案
+        leftDiv.textContent = leftContent;  // textContent 保留 \n
+
+        // 右側欄：答案
         const rightDiv = document.createElement('div');
         rightDiv.className = "bank-answer";
         if(qtype === "選擇題"){
-          rightDiv.innerHTML = `<b>${item.answer}</b>`;
+          rightDiv.textContent = item.answer;
         } else {
-          let ansText = (item.answer === 1) ? "是" : "否";
-          rightDiv.innerHTML = `<b>${ansText}</b>`;
+          rightDiv.textContent = (item.answer === 1) ? "是" : "否";
         }
         if(bankShowAllAnswer){
           rightDiv.classList.add('show');
@@ -768,17 +941,20 @@
           rightDiv.classList.remove('show');
         }
         addHighlightEvents(leftDiv, rightDiv);
-        
+
         contentDiv.appendChild(leftDiv);
         contentDiv.appendChild(rightDiv);
       });
+
       pageView.appendChild(contentDiv);
-      // 下方添加分頁資訊與按鈕
+
+      // 下方分頁
       const paginationContainer = document.createElement('div');
       paginationContainer.className = "bank-pagination";
       const pageInfo = document.createElement('div');
       pageInfo.textContent = `第 ${bankCurrentPage + 1} 頁，共 ${bankTotalPages} 頁`;
       paginationContainer.appendChild(pageInfo);
+      
       const navDiv = document.createElement('div');
       if(bankCurrentPage > 0){
         const prevBtn = document.createElement('button');
@@ -806,7 +982,9 @@
       pageView.appendChild(paginationContainer);
     }
 
-    // 7. 開始測驗 (交通/地理)
+    /*
+     * 7. 開始測驗 (交通/地理)
+     * ---------------------------------------------------------- */
     function startTrafficTest(){
       trafficMode = true;
       selectQuestionsTraffic();
@@ -819,6 +997,7 @@
       QUIZ_CONTAINER.classList.remove('hidden');
       showQuestionPage();
     }
+
     function startGeoTest(){
       trafficMode = false;
       let total = 0;
@@ -843,10 +1022,13 @@
       QUIZ_CONTAINER.classList.remove('hidden');
       showQuestionPage();
     }
+
     function selectQuestionsCity(){
       selectedQuestions = { "是非題": [], "選擇題": [] };
       score = 0;
       let totalTF = 20, totalMC = 30;
+      
+      // 按比例分配 是非題
       REGIONS.forEach(r => {
         let need = Math.round(proportions[r] / 100 * totalTF);
         let pool = questions[r]["是非題"];
@@ -856,6 +1038,7 @@
           selectedQuestions["是非題"].push(...picked);
         }
       });
+      // 不足的題數隨機補齊
       while(selectedQuestions["是非題"].length < 20){
         let rr = randomItem(REGIONS);
         let p = questions[rr]["是非題"];
@@ -865,6 +1048,8 @@
           selectedQuestions["是非題"].push(c);
         }
       }
+
+      // 按比例分配 選擇題
       REGIONS.forEach(r => {
         let need = Math.round(proportions[r] / 100 * totalMC);
         let pool = questions[r]["選擇題"];
@@ -874,6 +1059,7 @@
           selectedQuestions["選擇題"].push(...picked);
         }
       });
+      // 不足的題數隨機補齊
       while(selectedQuestions["選擇題"].length < 30){
         let rr = randomItem(REGIONS);
         let p = questions[rr]["選擇題"];
@@ -883,19 +1069,23 @@
           selectedQuestions["選擇題"].push(c);
         }
       }
+
       shuffleArray(selectedQuestions["是非題"]);
       shuffleArray(selectedQuestions["選擇題"]);
     }
+
     function selectQuestionsTraffic(){
       selectedQuestions = { "是非題": [], "選擇題": [] };
       score = 0;
       let tfAll = questions["交通法令"]["是非題"];
       let mcAll = questions["交通法令"]["選擇題"];
+      // 25 是非
       if(tfAll.length < 25){
         selectedQuestions["是非題"] = tfAll.slice();
       } else {
         selectedQuestions["是非題"] = randomPick(tfAll, 25);
       }
+      // 25 選擇
       if(mcAll.length < 25){
         selectedQuestions["選擇題"] = mcAll.slice();
       } else {
@@ -905,7 +1095,9 @@
       shuffleArray(selectedQuestions["選擇題"]);
     }
 
-    // 8. 分頁顯示測驗題目與回填
+    /*
+     * 8. 分頁顯示測驗題目與回填
+     * ---------------------------------------------------------- */
     function showQuestionPage(){
       const titleEl = document.getElementById('quiz-page-title');
       const navEl = document.getElementById('quiz-nav');
@@ -913,9 +1105,11 @@
       titleEl.textContent = "";
       navEl.innerHTML = "";
       qArea.innerHTML = "";
+
       let pageTitle = "";
       let questionsList = [];
       if(!trafficMode){
+        // 地理模式 共 20 是非 + 30 選擇 => 頁次 0,1 (是非題), 頁次 2,3,4 (選擇題)
         if(currentPage < 2){
           let start = currentPage * 10, end = start + 10;
           questionsList = selectedQuestions["是非題"].slice(start, end);
@@ -926,6 +1120,7 @@
           pageTitle = `選擇題 第 ${start+1} ~ ${end} 題`;
         }
       } else {
+        // 交通模式 25 是非, 25 選擇 => 頁次 0,1,2,3,4 => 特殊第三頁(5 是非 + 5 選擇)
         if(currentPage < 2){
           let start = currentPage * 10, end = start + 10;
           questionsList = selectedQuestions["是非題"].slice(start, end);
@@ -945,6 +1140,7 @@
           }
         }
       }
+
       titleEl.textContent = pageTitle;
       questionsList.forEach((qObj, idx) => {
         const globalQNum = getGlobalQuestionNumber(idx);
@@ -952,11 +1148,13 @@
         block.className = 'question-block';
         block.innerHTML = `<b>${globalQNum}. ${qObj.question}</b><br/>`;
         if(!('options' in qObj)){
+          // 是非題
           block.innerHTML += `
             <label><input type="radio" name="q${globalQNum}" value="1"> 是</label><br/>
             <label><input type="radio" name="q${globalQNum}" value="2"> 否</label>
           `;
         } else {
+          // 選擇題
           let sortedKeys = Object.keys(qObj.options).sort((a, b) => parseInt(a) - parseInt(b));
           sortedKeys.forEach(k => {
             block.innerHTML += `
@@ -965,12 +1163,15 @@
           });
         }
         qArea.appendChild(block);
+
+        // 回填先前作答
         const savedVal = userAnswers[globalQNum];
         if(savedVal !== undefined){
           const radioToCheck = block.querySelector(`input[name="q${globalQNum}"][value="${savedVal}"]`);
           if(radioToCheck) radioToCheck.checked = true;
         }
       });
+
       if(currentPage > 0){
         const prevBtn = document.createElement('button');
         prevBtn.className = "btn";
@@ -994,14 +1195,17 @@
       }
       window.scrollTo(0, 0);
     }
+
     function getGlobalQuestionNumber(localIndex){
       if(!trafficMode){
+        // 地理: 前 20 (是非), 後 30 (選擇)
         if(currentPage < 2){
           return currentPage * 10 + localIndex + 1;
         } else {
           return 20 + (currentPage - 2) * 10 + localIndex + 1;
         }
       } else {
+        // 交通: 前25 (是非), 後25 (選擇)
         if(currentPage < 2){
           return currentPage * 10 + localIndex + 1;
         } else if(currentPage === 2){
@@ -1013,6 +1217,7 @@
         }
       }
     }
+
     function goPrev(){
       saveAnswers();
       if(currentPage > 0){
@@ -1020,6 +1225,7 @@
         showQuestionPage();
       }
     }
+
     function goNext(){
       saveAnswers();
       if(currentPage < 4){
@@ -1029,6 +1235,7 @@
         calculateScore();
       }
     }
+
     function saveAnswers(){
       const quizQArea = document.getElementById('quiz-questions');
       const checkedRadios = quizQArea.querySelectorAll('input[type="radio"]:checked');
@@ -1038,11 +1245,17 @@
         userAnswers[qNum] = parseInt(radio.value,10);
       });
     }
+
+    /*
+     * 9. 計算成績 & 顯示結果
+     * ---------------------------------------------------------- */
     function calculateScore(){
       saveAnswers();
       score = 0;
       correctAnswers = {};
+
       if(!trafficMode){
+        // 地理: 前 20 (是非), 後 30 (選擇)
         selectedQuestions["是非題"].forEach((qObj, i) => {
           let qNum = i + 1;
           correctAnswers[qNum] = qObj.answer;
@@ -1058,6 +1271,7 @@
           }
         });
       } else {
+        // 交通: 前25 (是非), 後25 (選擇)
         selectedQuestions["是非題"].forEach((qObj, i) => {
           let qNum = i + 1;
           correctAnswers[qNum] = qObj.answer;
@@ -1073,31 +1287,38 @@
           }
         });
       }
+
       QUIZ_CONTAINER.classList.add('hidden');
       RESULT_CONTAINER.classList.remove('hidden');
       showScore();
     }
+
     function showScore(){
       const resDiv = document.getElementById('result-area');
       resDiv.innerHTML = "";
+
       let msg = (score >= 70)
         ? `您的成績：${score} 分 (及格)`
         : `您的成績：${score} 分 (不及格)`;
+
       let p = document.createElement('p');
       p.className = 'result';
       p.textContent = msg;
       resDiv.appendChild(p);
+
       const corrBtn = document.createElement('button');
       corrBtn.className = "btn";
       corrBtn.textContent = "訂正錯誤";
       corrBtn.onclick = showCorrections;
       resDiv.appendChild(corrBtn);
+
       const retakeBtn = document.createElement('button');
       retakeBtn.className = "btn";
       retakeBtn.textContent = "重新考試";
       retakeBtn.style.marginLeft = "10px";
       retakeBtn.onclick = retakeQuiz;
       resDiv.appendChild(retakeBtn);
+
       const homeBtn = document.createElement('button');
       homeBtn.className = "btn";
       homeBtn.textContent = "顯示首頁";
@@ -1108,14 +1329,17 @@
         window.scrollTo(0, 0);
       };
       resDiv.appendChild(homeBtn);
+
       window.scrollTo(0, 0);
     }
+
     function showCorrections(){
       const resDiv = document.getElementById('result-area');
       resDiv.innerHTML = "<h3>訂正錯誤</h3>";
       let wrongCount = 0;
       const ul = document.createElement('ul');
       ul.style.listStyleType = "none";
+
       for(let qNum in correctAnswers){
         qNum = parseInt(qNum, 10);
         let userAns = userAnswers[qNum] || 0;
@@ -1136,6 +1360,7 @@
               theQuestionObj = selectedQuestions["選擇題"][qNum - 26];
             }
           }
+
           let userDisplay = "未作答";
           let corrDisplay = "未知";
           if(!("options" in theQuestionObj)){
@@ -1157,6 +1382,7 @@
               corrDisplay = corrAns + ". [未知選項]";
             }
           }
+
           const li = document.createElement('li');
           li.innerHTML = `
             <div class="wrong"><b>第${qNum}題</b> ${theQuestionObj.question}</div>
@@ -1173,11 +1399,13 @@
       } else {
         resDiv.appendChild(ul);
       }
+
       const retakeBtn = document.createElement('button');
       retakeBtn.className = "btn";
       retakeBtn.textContent = "重新考試";
       retakeBtn.onclick = retakeQuiz;
       resDiv.appendChild(retakeBtn);
+
       const homeBtn = document.createElement('button');
       homeBtn.className = "btn";
       homeBtn.textContent = "顯示首頁";
@@ -1189,6 +1417,7 @@
       };
       resDiv.appendChild(homeBtn);
     }
+
     function retakeQuiz(){
       if(confirm("是否要回到首頁？")){
         RESULT_CONTAINER.classList.add('hidden');
@@ -1199,7 +1428,10 @@
         else startGeoTest();
       }
     }
-    // 10. 工具函式
+
+    /*
+     * 10. 工具函式
+     * ---------------------------------------------------------- */
     function randomPick(arr, count){
       let copy = arr.slice();
       shuffleArray(copy);
