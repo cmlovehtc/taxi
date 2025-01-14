@@ -106,6 +106,24 @@
     }
 
     /*
+     * 顯示統計資訊的表格
+     * ---------------------------------------------------------- */
+    .stats-table {
+      border-collapse: collapse;
+      margin: 10px 0;
+      width: 100%;
+    }
+    .stats-table th,
+    .stats-table td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .stats-table th {
+      background: #f0f0f0;
+    }
+
+    /*
      * 勾選框區域 
      * ---------------------------------------------------------- */
     #region-checkboxes {
@@ -126,24 +144,6 @@
     }
 
     /*
-     * 顯示統計資訊的表格
-     * ---------------------------------------------------------- */
-    .stats-table {
-      border-collapse: collapse;
-      margin: 10px 0;
-      width: 100%;
-    }
-    .stats-table th,
-    .stats-table td {
-      border: 1px solid #ccc;
-      padding: 6px 8px;
-      text-align: center;
-    }
-    .stats-table th {
-      background: #f0f0f0;
-    }
-
-    /* 
      * 題庫檢視頁 
      * ---------------------------------------------------------- */
     .bank-top-nav, .bank-sort-nav {
@@ -253,6 +253,25 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       z-index: 1000;
     }
+
+    /* 
+     * 新增：自訂題數輸入區的樣式 
+     * ---------------------------------------------------------- */
+    .custom-questions-container {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .custom-questions-container label {
+      margin-right: 8px;
+    }
+    .custom-questions-container input {
+      width: 60px;
+      margin-right: 16px;
+      padding: 4px;
+    }
+
   </style>
 </head>
 <body>
@@ -271,24 +290,37 @@
         全國首創 <strong>智能題庫隨行</strong> 機制，讓您在檢視題庫時，移動或點擊題目即可即時顯示正確答案，提供最佳考前複習體驗！
       </p>
       
+      <!-- 比例輸入區 -->
       <h3>請輸入各縣市的比例 (總和=100)</h3>
       <div id="region-inputs"></div>
       <div style="margin-top:10px;">
         <button class="btn" id="start-geo">地理位置開始測驗</button>
         <button class="btn" id="start-traffic">開始交通法規測驗（50題）</button>
+        <button class="btn" id="start-wrong-practice">錯誤題目練習</button>
+        <button class="btn" id="clear-wrong">清除錯誤題目</button>
         <button class="btn" id="view-bank-menu">查看題庫</button>
+      </div>
+
+      <!-- 新增：自訂題數輸入區 (預設唯讀) -->
+      <div class="custom-questions-container">
+        <label>是非題</label>
+        <input type="number" id="custom-tf" value="20" readonly>
+        <label>選擇題</label>
+        <input type="number" id="custom-mc" value="30" readonly>
+        <button class="btn" id="toggle-custom-btn">自訂義出題數量</button>
       </div>
 
       <h3>選擇要包含的縣市</h3>
       <div id="region-checkboxes"></div>
       <button class="btn" id="calculate-stats">計算統計</button>
+      <button class="btn" id="toggle-select-all">全部勾選</button>
 
       <h3>各縣市題庫數量及統計</h3>
       <div id="stats-info" class="hidden"></div>
 
       <div class="footer">
         郭建隆自動出題程式祝大家考試順利<br>
-        更新日期:2025/1/12日<br>
+        更新日期:2025/1/14日<br>
         郭建隆版權所有<br>
         聯絡作者: cmlovehtc@gmail.com<br>
         LINE: cmlovehtc (歡迎加LINE提供你考試密技，計程車車隊分析)
@@ -348,18 +380,22 @@
     let userAnswers = {};      // key: 全卷題號, val: 使用者選的選項數字
     let correctAnswers = {};   // key: 全卷題號, val: 正確選項
     let score = 0;
-    let trafficMode = false;
-    let currentPage = 0; // 用於一般測驗分頁
 
-    // 題庫檢視分頁 & PDF 需要的資料
-    let bankCurrentPage = 0;
-    let bankAllData = [];  // 儲存目前顯示的題庫資料（包含 { index, question, answer, options }）
-    let bankTotalPages = 0;
-    let bankShowAllAnswer = false; // 預設隱藏答案
+    // 狀態參數
+    let trafficMode = false;   // 是否交通法規測驗
+    let wrongMode = false;     // 是否「錯誤題目練習」模式
+    let currentPage = 0;       // 分頁
+    let totalPage = 0;         // 總頁數
 
-    // 用於記錄「目前使用者檢視的縣市」和「目前排序方式」(給 PDF 命名)
-    let selectedRegion = "";
-    let currentSortMethod = "題號排序"; // 可以自定初始排序名稱
+    // 自訂題數
+    let customTfInput = document.getElementById('custom-tf');
+    let customMcInput = document.getElementById('custom-mc');
+    let toggleCustomBtn = document.getElementById('toggle-custom-btn');
+    let customEditable = false; // 是否允許編輯
+
+    // 讀取 localStorage 的錯題
+    let wrongQuestionsStorage = localStorage.getItem("wrongQuestions");
+    let wrongQuestions = wrongQuestionsStorage ? JSON.parse(wrongQuestionsStorage) : [];
 
     /*
      * 2. 建立「輸入比例」區 & 綁定按鈕
@@ -372,13 +408,51 @@
         <label>${r}</label>
         <input type="number" id="prop-${r}" value="0">
       `;
+      // 如果 focus 到 input，若值為0就清空
+      const inputEl = rowDiv.querySelector('input');
+      inputEl.addEventListener('focus', () => {
+        if(inputEl.value === "0"){
+          inputEl.value = "";
+        }
+      });
       regionInputsDiv.appendChild(rowDiv);
     });
 
+    // 綁定按鈕
     document.getElementById('start-traffic').addEventListener('click', startTrafficTest);
     document.getElementById('start-geo').addEventListener('click', startGeoTest);
     document.getElementById('view-bank-menu').addEventListener('click', showBankMenu);
     document.getElementById('calculate-stats').addEventListener('click', renderStatsInfo);
+    document.getElementById('start-wrong-practice').addEventListener('click', startWrongPractice);
+    document.getElementById('clear-wrong').addEventListener('click', clearWrong);
+
+    // 全部勾選/取消勾選
+    let toggleSelectAllBtn = document.getElementById('toggle-select-all');
+    let selectAllState = false; // false=顯示「全部勾選」、true=顯示「取消勾選」
+    toggleSelectAllBtn.addEventListener('click', () => {
+      selectAllState = !selectAllState;
+      let cbs = document.querySelectorAll('#region-checkboxes input[type="checkbox"]');
+      cbs.forEach(cb => cb.checked = selectAllState);
+      toggleSelectAllBtn.textContent = selectAllState ? "取消勾選" : "全部勾選";
+    });
+
+    // 自訂義出題數量 (預設唯讀)
+    toggleCustomBtn.addEventListener('click', () => {
+      customEditable = !customEditable;
+      if(customEditable) {
+        customTfInput.removeAttribute('readonly');
+        customMcInput.removeAttribute('readonly');
+        customTfInput.focus();
+        toggleCustomBtn.textContent = "還原預設值";
+      } else {
+        // 還原預設
+        customTfInput.value = 20;
+        customMcInput.value = 30;
+        customTfInput.setAttribute('readonly', true);
+        customMcInput.setAttribute('readonly', true);
+        toggleCustomBtn.textContent = "自訂義出題數量";
+      }
+    });
 
     // 載入題庫
     window.addEventListener('DOMContentLoaded', async () => {
@@ -438,7 +512,8 @@
             if(ansVal > 0) {
               questions[region][qtype].push({
                 question: questionText,
-                answer: ansVal  // 1=是, 2=否
+                answer: ansVal,  // 1=是, 2=否
+                region: region
               });
             }
           } else {
@@ -457,13 +532,15 @@
               questions[region][qtype].push({
                 question: qTxt,
                 options: opts,
-                answer: correct
+                answer: correct,
+                region: region
               });
             } else {
               questions[region][qtype].push({
                 question: questionText,
                 options: {},
-                answer: answerText
+                answer: answerText,
+                region: region
               });
             }
           }
@@ -572,7 +649,7 @@
           btn.onclick = () => {
             bankCurrentPage = 0;
             bankShowAllAnswer = false;
-            selectedRegion = region; // 記錄當前選擇的縣市 (用於 PDF 命名)
+            selectedRegion = region; // 用於 PDF 命名
             bankMenuDiv.innerHTML = "";
             showQuestionBank(region, qtype);
           };
@@ -582,7 +659,7 @@
       });
     }
 
-    // 事件：hover, click, touch → 顯示答案 & highlight
+    // Hover/Click 事件 → 顯示答案
     function addHighlightEvents(leftDiv, rightDiv) {
       // 滑鼠事件
       leftDiv.addEventListener('mouseenter', () => {
@@ -665,7 +742,7 @@
       }, { passive: false });
     }
 
-    // 新的 generatePDF 函式： 可動態帶入 region, qtype, sortMethod
+    // PDF 產生
     function generatePDF(region, qtype, sortMethod) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
@@ -674,13 +751,12 @@
         format: 'A4'
       });
 
-      // 1) 加入我們的 Base64 字型
+      // 加入 Base64 字型
       doc.addFileToVFS("NotoSansTC-Regular.ttf", NotoSansTCRegular);
       doc.addFont("NotoSansTC-Regular.ttf", "NotoSansTC", "normal");
       doc.setFont("NotoSansTC", "normal");
       doc.setTextColor(0, 0, 0);
 
-      // 2) 準備 AutoTable 的資料
       let tableData = bankAllData.map(item => {
         let questionStr = item.index + ". " + item.question;
         if (qtype === '選擇題' && item.options && Object.keys(item.options).length > 0) {
@@ -700,7 +776,6 @@
         return { question: questionStr, answer: ansStr };
       });
 
-      // 3) 產生表格 - 只在第一頁出現表頭, 第二欄(答案)置中
       doc.autoTable({
         columns: [
           { header: '題目', dataKey: 'question' },
@@ -717,7 +792,7 @@
           lineWidth: 0.1,
           font: "NotoSansTC",
           fontSize: 8,
-          halign: 'center',  // 表頭置中
+          halign: 'center',
         },
         bodyStyles: {
           lineWidth: 0.1,
@@ -730,19 +805,16 @@
           overflow: 'linebreak',
           lineHeight: 1,
         },
-        // 第二欄置中
         columnStyles: {
           answer: { halign: 'center' }
         },
       });
 
-      // 4) 動態檔名
-      // 例如：「臺北市__地理環境_是非題_題號排序.pdf」
       const fileName = `${region}__地理環境_${qtype}_${sortMethod}.pdf`;
       doc.save(fileName);
     }
 
-    // 根據題型產生排序按鈕區，並在按鈕上記錄目前「排序方式」，之後產 PDF 時帶入
+    // 排序按鈕 (題庫檢視用)
     function renderSortNav(qtype) {
       const sortNav = document.createElement('div');
       sortNav.className = "bank-sort-nav";
@@ -842,17 +914,22 @@
         sortNav.appendChild(sortIndexBtn);
       }
 
-      // 產生 PDF 按鈕
       let pdfBtn = document.createElement('button');
       pdfBtn.className = "btn";
       pdfBtn.textContent = "產生 PDF";
       pdfBtn.style.marginLeft = "20px";
-      // 記得帶入選擇的地區, qtype, 以及目前的排序方式
       pdfBtn.onclick = () => generatePDF(selectedRegion, qtype, currentSortMethod);
       sortNav.appendChild(pdfBtn);
 
       return sortNav;
     }
+
+    // 顯示題庫
+    let bankCurrentPage = 0;
+    let bankAllData = [];
+    let bankTotalPages = 0;
+    let bankShowAllAnswer = false;
+    let currentSortMethod = "題號排序";
 
     function showQuestionBank(region, qtype){
       const bankContent = document.getElementById('bank-content');
@@ -885,12 +962,11 @@
         window.scrollTo(0, 0);
       });
 
-      // 加入排序按鈕區
       const sortArea = document.getElementById('bank-sort-area');
       sortArea.innerHTML = "";
       sortArea.appendChild(renderSortNav(qtype));
       
-      // 整理 bankAllData
+      // 填充 bankAllData
       let arr = questions[region][qtype];
       bankAllData = [];
       arr.forEach((qObj, idx) => {
@@ -914,7 +990,6 @@
       contentDiv.className = "bank-content-page";
 
       pageData.forEach(item => {
-        // 左側欄：題目
         const leftDiv = document.createElement('div');
         leftDiv.className = "bank-question";
         let leftContent = `${item.index}. ${item.question}`;
@@ -925,9 +1000,8 @@
             leftContent += `(${k}) ${item.options[k]}\n`;
           });
         }
-        leftDiv.textContent = leftContent;  // textContent 保留 \n
+        leftDiv.textContent = leftContent;
 
-        // 右側欄：答案
         const rightDiv = document.createElement('div');
         rightDiv.className = "bank-answer";
         if(qtype === "選擇題"){
@@ -948,7 +1022,6 @@
 
       pageView.appendChild(contentDiv);
 
-      // 下方分頁
       const paginationContainer = document.createElement('div');
       paginationContainer.className = "bank-pagination";
       const pageInfo = document.createElement('div');
@@ -983,22 +1056,18 @@
     }
 
     /*
-     * 7. 開始測驗 (交通/地理)
+     * 7. 開始測驗 (交通/地理/錯誤題目)
      * ---------------------------------------------------------- */
     function startTrafficTest(){
+      wrongMode = false;
       trafficMode = true;
-      selectQuestionsTraffic();
-      currentPage = 0;
-      userAnswers = {};
-      correctAnswers = {};
-      HOME_CONTAINER.classList.add('hidden');
-      BANK_CONTAINER.classList.add('hidden');
-      RESULT_CONTAINER.classList.add('hidden');
-      QUIZ_CONTAINER.classList.remove('hidden');
-      showQuestionPage();
+      let ret = selectQuestionsTraffic();
+      if(!ret) return; // 代表題庫不足或錯誤 -> 中斷
+      startQuizCommon();
     }
 
     function startGeoTest(){
+      wrongMode = false;
       trafficMode = false;
       let total = 0;
       proportions = {};
@@ -1012,7 +1081,42 @@
         alert(`縣市比例加總必須為100，目前為 ${total}`);
         return;
       }
-      selectQuestionsCity();
+      let ret = selectQuestionsCity();
+      if(!ret) return;
+      startQuizCommon();
+    }
+
+    function startWrongPractice(){
+      if(wrongQuestions.length === 0){
+        alert("目前沒有錯誤題目可以練習。");
+        return;
+      }
+      wrongMode = true;
+      trafficMode = false; 
+      selectedQuestions = { "是非題": [], "選擇題": [] };
+
+      // 將 wrongQuestions 分類成 地理是非 / 地理選擇 / 交通是非 / 交通選擇
+      let geoTF = wrongQuestions.filter(q => !q.options && q.region !== "交通法令");
+      let geoMC = wrongQuestions.filter(q => q.options && q.region !== "交通法令");
+      let trafficTF = wrongQuestions.filter(q => !q.options && q.region === "交通法令");
+      let trafficMC = wrongQuestions.filter(q => q.options && q.region === "交通法令");
+
+      // 組合：地理是非→地理選擇→交通是非→交通選擇
+      selectedQuestions["是非題"] = [...geoTF, ...trafficTF];
+      selectedQuestions["選擇題"] = [...geoMC, ...trafficMC];
+
+      startQuizCommon();
+    }
+
+    function clearWrong(){
+      if(confirm("確定要清除所有錯誤題目紀錄嗎？")){
+        wrongQuestions = [];
+        localStorage.removeItem("wrongQuestions");
+        alert("已清除所有錯誤題目。");
+      }
+    }
+
+    function startQuizCommon(){
       currentPage = 0;
       userAnswers = {};
       correctAnswers = {};
@@ -1023,12 +1127,30 @@
       showQuestionPage();
     }
 
+    /*
+     * 8. 選題 & 檢查題庫數量
+     * ---------------------------------------------------------- */
     function selectQuestionsCity(){
       selectedQuestions = { "是非題": [], "選擇題": [] };
-      score = 0;
-      let totalTF = 20, totalMC = 30;
-      
-      // 按比例分配 是非題
+
+      let totalTF = parseInt(customTfInput.value, 10) || 20;
+      let totalMC = parseInt(customMcInput.value, 10) || 30;
+
+      // 檢查每個地區題庫是否足夠
+      for(let r of REGIONS){
+        let tfNeeded = Math.round(proportions[r] / 100 * totalTF);
+        if(tfNeeded > questions[r]["是非題"].length){
+          alert(`你輸入出題題目大於題庫數量：${r} 是非題僅有 ${questions[r]["是非題"].length} 題。`);
+          return false;
+        }
+        let mcNeeded = Math.round(proportions[r] / 100 * totalMC);
+        if(mcNeeded > questions[r]["選擇題"].length){
+          alert(`你輸入出題題目大於題庫數量：${r} 選擇題僅有 ${questions[r]["選擇題"].length} 題。`);
+          return false;
+        }
+      }
+
+      // 分配 是非題
       REGIONS.forEach(r => {
         let need = Math.round(proportions[r] / 100 * totalTF);
         let pool = questions[r]["是非題"];
@@ -1038,8 +1160,8 @@
           selectedQuestions["是非題"].push(...picked);
         }
       });
-      // 不足的題數隨機補齊
-      while(selectedQuestions["是非題"].length < 20){
+      // 不足的部分隨機補齊
+      while(selectedQuestions["是非題"].length < totalTF){
         let rr = randomItem(REGIONS);
         let p = questions[rr]["是非題"];
         if(!p.length) continue;
@@ -1049,7 +1171,7 @@
         }
       }
 
-      // 按比例分配 選擇題
+      // 分配 選擇題
       REGIONS.forEach(r => {
         let need = Math.round(proportions[r] / 100 * totalMC);
         let pool = questions[r]["選擇題"];
@@ -1059,8 +1181,7 @@
           selectedQuestions["選擇題"].push(...picked);
         }
       });
-      // 不足的題數隨機補齊
-      while(selectedQuestions["選擇題"].length < 30){
+      while(selectedQuestions["選擇題"].length < totalMC){
         let rr = randomItem(REGIONS);
         let p = questions[rr]["選擇題"];
         if(!p.length) continue;
@@ -1072,31 +1193,39 @@
 
       shuffleArray(selectedQuestions["是非題"]);
       shuffleArray(selectedQuestions["選擇題"]);
+      return true;
     }
 
     function selectQuestionsTraffic(){
       selectedQuestions = { "是非題": [], "選擇題": [] };
-      score = 0;
+
+      let totalTF = parseInt(customTfInput.value, 10) || 20;  // 預設 25
+      let totalMC = parseInt(customMcInput.value, 10) || 30; // 預設 25
+      if(totalTF === 20 && totalMC === 30) {
+        totalTF = 25;
+        totalMC = 25;
+      }
+
+      // 檢查交通法令是否足
+      if(totalTF > questions["交通法令"]["是非題"].length){
+        alert(`你輸入出題題目大於題庫數量：交通法令 是非題僅有 ${questions["交通法令"]["是非題"].length} 題。`);
+        return false;
+      }
+      if(totalMC > questions["交通法令"]["選擇題"].length){
+        alert(`你輸入出題題目大於題庫數量：交通法令 選擇題僅有 ${questions["交通法令"]["選擇題"].length} 題。`);
+        return false;
+      }
+
+      // 取得題目
       let tfAll = questions["交通法令"]["是非題"];
       let mcAll = questions["交通法令"]["選擇題"];
-      // 25 是非
-      if(tfAll.length < 25){
-        selectedQuestions["是非題"] = tfAll.slice();
-      } else {
-        selectedQuestions["是非題"] = randomPick(tfAll, 25);
-      }
-      // 25 選擇
-      if(mcAll.length < 25){
-        selectedQuestions["選擇題"] = mcAll.slice();
-      } else {
-        selectedQuestions["選擇題"] = randomPick(mcAll, 25);
-      }
-      shuffleArray(selectedQuestions["是非題"]);
-      shuffleArray(selectedQuestions["選擇題"]);
+      selectedQuestions["是非題"] = randomPick(tfAll, totalTF);
+      selectedQuestions["選擇題"] = randomPick(mcAll, totalMC);
+      return true;
     }
 
     /*
-     * 8. 分頁顯示測驗題目與回填
+     * 9. 分頁顯示測驗題目與回填
      * ---------------------------------------------------------- */
     function showQuestionPage(){
       const titleEl = document.getElementById('quiz-page-title');
@@ -1106,72 +1235,50 @@
       navEl.innerHTML = "";
       qArea.innerHTML = "";
 
-      let pageTitle = "";
-      let questionsList = [];
-      if(!trafficMode){
-        // 地理模式 共 20 是非 + 30 選擇 => 頁次 0,1 (是非題), 頁次 2,3,4 (選擇題)
-        if(currentPage < 2){
-          let start = currentPage * 10, end = start + 10;
-          questionsList = selectedQuestions["是非題"].slice(start, end);
-          pageTitle = `是非題 第 ${start+1} ~ ${end} 題`;
+      // 分頁資料
+      let combined;
+      if(wrongMode){
+        // 錯誤題目練習
+        let geoTF = selectedQuestions["是非題"].filter(q => q.region !== "交通法令");
+        let tfTraffic = selectedQuestions["是非題"].filter(q => q.region === "交通法令");
+        let geoMC = selectedQuestions["選擇題"].filter(q => q.region !== "交通法令");
+        let mcTraffic = selectedQuestions["選擇題"].filter(q => q.region === "交通法令");
+        combined = [...geoTF, ...tfTraffic, ...geoMC, ...mcTraffic];
+        let allCount = combined.length;
+        totalPage = Math.ceil(allCount / 10);
+        let startIndex = currentPage * 10;
+        let endIndex = startIndex + 10;
+        if(endIndex > allCount) endIndex = allCount;
+        let pageData = combined.slice(startIndex, endIndex);
+        titleEl.textContent = `錯誤題目練習：第 ${startIndex+1} ~ ${endIndex} 題 (共 ${allCount} 題)`;
+
+        pageData.forEach((qObj, idx) => {
+          let globalQNum = currentPage * 10 + idx + 1;
+          createQuestionBlock(qArea, qObj, globalQNum);
+        });
+      }
+      else {
+        // 一般地理 or 交通
+        let allData = [...selectedQuestions["是非題"], ...selectedQuestions["選擇題"]];
+        let allCount = allData.length;
+        totalPage = Math.ceil(allCount / 10);
+        let startIndex = currentPage * 10;
+        let endIndex = startIndex + 10;
+        if(endIndex > allCount) endIndex = allCount;
+        let pageData = allData.slice(startIndex, endIndex);
+
+        if(!trafficMode){
+          titleEl.textContent = `地理環境測驗：第 ${startIndex+1} ~ ${endIndex} 題 (共 ${allCount} 題)`;
         } else {
-          let start = (currentPage - 2) * 10, end = start + 10;
-          questionsList = selectedQuestions["選擇題"].slice(start, end);
-          pageTitle = `選擇題 第 ${start+1} ~ ${end} 題`;
+          titleEl.textContent = `交通法規測驗：第 ${startIndex+1} ~ ${endIndex} 題 (共 ${allCount} 題)`;
         }
-      } else {
-        // 交通模式 25 是非, 25 選擇 => 頁次 0,1,2,3,4 => 特殊第三頁(5 是非 + 5 選擇)
-        if(currentPage < 2){
-          let start = currentPage * 10, end = start + 10;
-          questionsList = selectedQuestions["是非題"].slice(start, end);
-          pageTitle = `交通法規 是非題 第 ${start+1} ~ ${end} 題`;
-        } else if(currentPage === 2){
-          let tfPart = selectedQuestions["是非題"].slice(20, 25);
-          let mcPart = selectedQuestions["選擇題"].slice(0, 5);
-          questionsList = tfPart.concat(mcPart);
-          pageTitle = "交通法規 第 21 ~ 30 題（5 是非 + 5 選擇）";
-        } else {
-          if(currentPage === 3){
-            questionsList = selectedQuestions["選擇題"].slice(5, 15);
-            pageTitle = "交通法規 選擇題 第 31 ~ 40 題";
-          } else {
-            questionsList = selectedQuestions["選擇題"].slice(15, 25);
-            pageTitle = "交通法規 選擇題 第 41 ~ 50 題";
-          }
-        }
+        pageData.forEach((qObj, idx) => {
+          let globalQNum = currentPage * 10 + idx + 1;
+          createQuestionBlock(qArea, qObj, globalQNum);
+        });
       }
 
-      titleEl.textContent = pageTitle;
-      questionsList.forEach((qObj, idx) => {
-        const globalQNum = getGlobalQuestionNumber(idx);
-        const block = document.createElement('div');
-        block.className = 'question-block';
-        block.innerHTML = `<b>${globalQNum}. ${qObj.question}</b><br/>`;
-        if(!('options' in qObj)){
-          // 是非題
-          block.innerHTML += `
-            <label><input type="radio" name="q${globalQNum}" value="1"> 是</label><br/>
-            <label><input type="radio" name="q${globalQNum}" value="2"> 否</label>
-          `;
-        } else {
-          // 選擇題
-          let sortedKeys = Object.keys(qObj.options).sort((a, b) => parseInt(a) - parseInt(b));
-          sortedKeys.forEach(k => {
-            block.innerHTML += `
-              <label><input type="radio" name="q${globalQNum}" value="${k}"> (${k}) ${qObj.options[k]}</label><br/>
-            `;
-          });
-        }
-        qArea.appendChild(block);
-
-        // 回填先前作答
-        const savedVal = userAnswers[globalQNum];
-        if(savedVal !== undefined){
-          const radioToCheck = block.querySelector(`input[name="q${globalQNum}"][value="${savedVal}"]`);
-          if(radioToCheck) radioToCheck.checked = true;
-        }
-      });
-
+      // 分頁按鈕
       if(currentPage > 0){
         const prevBtn = document.createElement('button');
         prevBtn.className = "btn";
@@ -1180,7 +1287,7 @@
         prevBtn.onclick = goPrev;
         navEl.appendChild(prevBtn);
       }
-      if(currentPage < 4){
+      if(currentPage < totalPage - 1){
         const nextBtn = document.createElement('button');
         nextBtn.className = "btn";
         nextBtn.textContent = "下一頁";
@@ -1196,25 +1303,30 @@
       window.scrollTo(0, 0);
     }
 
-    function getGlobalQuestionNumber(localIndex){
-      if(!trafficMode){
-        // 地理: 前 20 (是非), 後 30 (選擇)
-        if(currentPage < 2){
-          return currentPage * 10 + localIndex + 1;
-        } else {
-          return 20 + (currentPage - 2) * 10 + localIndex + 1;
-        }
+    function createQuestionBlock(container, qObj, globalQNum){
+      const block = document.createElement('div');
+      block.className = 'question-block';
+      block.innerHTML = `<b>${globalQNum}. ${qObj.question}</b><br/>`;
+      if(!qObj.options){
+        block.innerHTML += `
+          <label><input type="radio" name="q${globalQNum}" value="1"> 是</label><br/>
+          <label><input type="radio" name="q${globalQNum}" value="2"> 否</label>
+        `;
       } else {
-        // 交通: 前25 (是非), 後25 (選擇)
-        if(currentPage < 2){
-          return currentPage * 10 + localIndex + 1;
-        } else if(currentPage === 2){
-          return 20 + localIndex + 1;
-        } else if(currentPage === 3){
-          return 30 + localIndex + 1;
-        } else {
-          return 40 + localIndex + 1;
-        }
+        let sortedKeys = Object.keys(qObj.options).sort((a, b) => parseInt(a) - parseInt(b));
+        sortedKeys.forEach(k => {
+          block.innerHTML += `
+            <label><input type="radio" name="q${globalQNum}" value="${k}"> (${k}) ${qObj.options[k]}</label><br/>
+          `;
+        });
+      }
+      container.appendChild(block);
+
+      // 回填作答
+      const savedVal = userAnswers[globalQNum];
+      if(savedVal !== undefined){
+        const radioToCheck = block.querySelector(`input[name="q${globalQNum}"][value="${savedVal}"]`);
+        if(radioToCheck) radioToCheck.checked = true;
       }
     }
 
@@ -1228,7 +1340,7 @@
 
     function goNext(){
       saveAnswers();
-      if(currentPage < 4){
+      if(currentPage < totalPage - 1){
         currentPage++;
         showQuestionPage();
       } else {
@@ -1247,71 +1359,118 @@
     }
 
     /*
-     * 9. 計算成績 & 顯示結果
+     * 10. 計算成績 & 顯示結果 (含更新錯題)
      * ---------------------------------------------------------- */
     function calculateScore(){
       saveAnswers();
-      score = 0;
-      correctAnswers = {};
 
-      if(!trafficMode){
-        // 地理: 前 20 (是非), 後 30 (選擇)
-        selectedQuestions["是非題"].forEach((qObj, i) => {
-          let qNum = i + 1;
-          correctAnswers[qNum] = qObj.answer;
-          if(userAnswers[qNum] === qObj.answer){
-            score += 2;
-          }
-        });
-        selectedQuestions["選擇題"].forEach((qObj, i) => {
-          let qNum = 21 + i;
-          correctAnswers[qNum] = qObj.answer;
-          if(userAnswers[qNum] === qObj.answer){
-            score += 2;
-          }
-        });
+      let allQuestions = [];
+      if(wrongMode){
+        // 將錯誤題庫依地理/交通排序過的合併
+        let geoTF = selectedQuestions["是非題"].filter(q => q.region !== "交通法令");
+        let tfTraffic = selectedQuestions["是非題"].filter(q => q.region === "交通法令");
+        let geoMC = selectedQuestions["選擇題"].filter(q => q.region !== "交通法令");
+        let mcTraffic = selectedQuestions["選擇題"].filter(q => q.region === "交通法令");
+        allQuestions = [...geoTF, ...tfTraffic, ...geoMC, ...mcTraffic];
       } else {
-        // 交通: 前25 (是非), 後25 (選擇)
-        selectedQuestions["是非題"].forEach((qObj, i) => {
-          let qNum = i + 1;
-          correctAnswers[qNum] = qObj.answer;
-          if(userAnswers[qNum] === qObj.answer){
-            score += 2;
-          }
+        // 一般地理/交通
+        allQuestions = [...selectedQuestions["是非題"], ...selectedQuestions["選擇題"]];
+      }
+
+      let totalQ = allQuestions.length;
+      let correctCount = 0;
+      let stillWrong = [];  // 下次仍然保留在錯誤題庫的題目
+      let currentWrong = []; // 本次測驗中答錯的題目
+
+      allQuestions.forEach((qObj, idx) => {
+        let qNum = idx + 1; // 只做識別用
+        let userAns = userAnswers[qNum] || 0;
+        if(userAns === qObj.answer){
+          // 答對
+          correctCount++;
+        } else {
+          // 答錯
+          let newWrong = Object.assign({}, qObj);
+          currentWrong.push(newWrong);
+        }
+      });
+
+      // 分數計算：每題 (100 / totalQ)
+      let perScore = 100 / totalQ;
+      let rawScore = correctCount * perScore;
+      score = parseFloat(rawScore.toFixed(2)); // 保留2位小數
+
+      // 若是錯題練習 => 要把「本次答對了」的題目 從 wrongQuestions 裡刪除
+      // step: 先把 "stillWrong" 放=wrongQuestions, 再移除本次答對的
+      if(wrongMode){
+        // 取得本次題目的 ID
+        // 其實我們可以用 question + answer 來判斷
+        let questionSet = new Set();
+        allQuestions.forEach(q => {
+          let key = q.region + "|" + q.question + "|" + q.answer;
+          questionSet.add(key);
         });
-        selectedQuestions["選擇題"].forEach((qObj, i) => {
-          let qNum = 26 + i;
-          correctAnswers[qNum] = qObj.answer;
-          if(userAnswers[qNum] === qObj.answer){
-            score += 2;
-          }
+
+        // 先複製
+        stillWrong = wrongQuestions.filter(w => {
+          // 如果本次有出現(在questionSet裡)，且本次還是錯 => 保留
+          let wKey = w.region + "|" + w.question + "|" + w.answer;
+          // 本次測驗沒出現 or 這次答對了 => 不保留
+          // 但是要判斷 "這次錯了嗎" => currentWrong 會有
+          let isInThisQuiz = questionSet.has(wKey);
+          let isStillWrong = currentWrong.some(x => {
+            let cKey = x.region + "|" + x.question + "|" + x.answer;
+            return cKey === wKey;
+          });
+          return !isInThisQuiz || isStillWrong;
         });
+
+        wrongQuestions = stillWrong.slice(); // 更新全域 wrongQuestions
+        localStorage.setItem("wrongQuestions", JSON.stringify(wrongQuestions));
+      } else {
+        // 若不是錯題練習 => 把 currentWrong 加入 wrongQuestions
+        if(currentWrong.length > 0){
+          let toAdd = [];
+          currentWrong.forEach(wObj => {
+            let key = wObj.region + "|" + wObj.question + "|" + wObj.answer;
+            let exist = wrongQuestions.some(k => {
+              let kKey = k.region + "|" + k.question + "|" + k.answer;
+              return kKey === key;
+            });
+            if(!exist) toAdd.push(wObj);
+          });
+          if(toAdd.length > 0){
+            wrongQuestions.push(...toAdd);
+            localStorage.setItem("wrongQuestions", JSON.stringify(wrongQuestions));
+          }
+        }
       }
 
       QUIZ_CONTAINER.classList.add('hidden');
       RESULT_CONTAINER.classList.remove('hidden');
-      showScore();
+      showScore(currentWrong);
     }
 
-    function showScore(){
+    function showScore(currentWrong){
       const resDiv = document.getElementById('result-area');
       resDiv.innerHTML = "";
 
       let msg = (score >= 70)
         ? `您的成績：${score} 分 (及格)`
         : `您的成績：${score} 分 (不及格)`;
-
       let p = document.createElement('p');
       p.className = 'result';
       p.textContent = msg;
       resDiv.appendChild(p);
 
+      // 訂正錯誤
       const corrBtn = document.createElement('button');
       corrBtn.className = "btn";
       corrBtn.textContent = "訂正錯誤";
-      corrBtn.onclick = showCorrections;
+      corrBtn.onclick = () => showCorrections(currentWrong);
       resDiv.appendChild(corrBtn);
 
+      // 重新考試
       const retakeBtn = document.createElement('button');
       retakeBtn.className = "btn";
       retakeBtn.textContent = "重新考試";
@@ -1319,6 +1478,7 @@
       retakeBtn.onclick = retakeQuiz;
       resDiv.appendChild(retakeBtn);
 
+      // 回首頁
       const homeBtn = document.createElement('button');
       homeBtn.className = "btn";
       homeBtn.textContent = "顯示首頁";
@@ -1333,79 +1493,48 @@
       window.scrollTo(0, 0);
     }
 
-    function showCorrections(){
+    function showCorrections(currentWrong){
       const resDiv = document.getElementById('result-area');
       resDiv.innerHTML = "<h3>訂正錯誤</h3>";
-      let wrongCount = 0;
-      const ul = document.createElement('ul');
-      ul.style.listStyleType = "none";
 
-      for(let qNum in correctAnswers){
-        qNum = parseInt(qNum, 10);
-        let userAns = userAnswers[qNum] || 0;
-        let corrAns = correctAnswers[qNum];
-        if(userAns !== corrAns){
-          wrongCount++;
-          let theQuestionObj = null;
-          if(!trafficMode){
-            if(qNum <= 20){
-              theQuestionObj = selectedQuestions["是非題"][qNum - 1];
-            } else {
-              theQuestionObj = selectedQuestions["選擇題"][qNum - 21];
-            }
-          } else {
-            if(qNum <= 25){
-              theQuestionObj = selectedQuestions["是非題"][qNum - 1];
-            } else {
-              theQuestionObj = selectedQuestions["選擇題"][qNum - 26];
-            }
-          }
-
-          let userDisplay = "未作答";
-          let corrDisplay = "未知";
-          if(!("options" in theQuestionObj)){
+      if(!currentWrong || currentWrong.length === 0){
+        resDiv.innerHTML += `<p>恭喜！沒有答錯任何一題</p>`;
+      } else {
+        const ul = document.createElement('ul');
+        ul.style.listStyleType = "none";
+        currentWrong.forEach((wObj, idx) => {
+          let qNum = idx + 1;
+          let ansDisplay = "";
+          if(!wObj.options){
             let ansMap = {1:"是", 2:"否"};
-            userDisplay  = (userAns > 0) ? `${userAns}. ${ansMap[userAns]}` : "未作答";
-            corrDisplay = `${corrAns}. ${ansMap[corrAns]}`;
+            ansDisplay = `${wObj.answer}. ${ansMap[wObj.answer]}`;
           } else {
-            const opts = theQuestionObj.options;
-            if(userAns > 0 && opts[userAns]){
-              userDisplay = `${userAns}. ${opts[userAns]}`;
-            } else if(userAns === 0){
-              userDisplay = "未作答";
+            if(wObj.options[wObj.answer]){
+              ansDisplay = `${wObj.answer}. ${wObj.options[wObj.answer]}`;
             } else {
-              userDisplay = userAns + ". [未定義選項]";
-            }
-            if(corrAns > 0 && opts[corrAns]){
-              corrDisplay = `${corrAns}. ${opts[corrAns]}`;
-            } else {
-              corrDisplay = corrAns + ". [未知選項]";
+              ansDisplay = wObj.answer + ". [未知選項]";
             }
           }
-
           const li = document.createElement('li');
           li.innerHTML = `
-            <div class="wrong"><b>第${qNum}題</b> ${theQuestionObj.question}</div>
+            <div class="wrong"><b>第${qNum}題</b> (${wObj.region}) ${wObj.question}</div>
             <div style="margin-left:20px;">
-              您的回答：<span class="wrong">${userDisplay}</span><br/>
-              正確答案：<span class="correct">${corrDisplay}</span>
+              正確答案：<span class="correct">${ansDisplay}</span>
             </div>
           `;
           ul.appendChild(li);
-        }
-      }
-      if(wrongCount === 0){
-        resDiv.innerHTML += `<p>恭喜！沒有答錯任何一題</p>`;
-      } else {
+        });
         resDiv.appendChild(ul);
       }
 
+      // 重新考試按鈕
       const retakeBtn = document.createElement('button');
       retakeBtn.className = "btn";
       retakeBtn.textContent = "重新考試";
       retakeBtn.onclick = retakeQuiz;
       resDiv.appendChild(retakeBtn);
 
+      // 回首頁
       const homeBtn = document.createElement('button');
       homeBtn.className = "btn";
       homeBtn.textContent = "顯示首頁";
@@ -1424,13 +1553,18 @@
         HOME_CONTAINER.classList.remove('hidden');
         window.scrollTo(0, 0);
       } else {
-        if(trafficMode) startTrafficTest();
-        else startGeoTest();
+        if(wrongMode){
+          startWrongPractice();
+        } else if(trafficMode){
+          startTrafficTest();
+        } else {
+          startGeoTest();
+        }
       }
     }
 
     /*
-     * 10. 工具函式
+     * 11. 工具函式
      * ---------------------------------------------------------- */
     function randomPick(arr, count){
       let copy = arr.slice();
