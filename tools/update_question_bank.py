@@ -27,6 +27,8 @@ from zoneinfo import ZoneInfo
 import pdfplumber
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 BASE_URL = "https://tx3.npa.gov.tw/NM112-512WebE"
@@ -198,10 +200,26 @@ def make_session() -> tuple[requests.Session, str, str]:
     session = requests.Session()
     session.headers.update(
         {
-            "User-Agent": "Mozilla/5.0 (compatible; TaxiQuestionBankUpdater/1.0; +https://github.com/cmlovehtc/taxi)",
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.7",
         }
     )
+    retry = Retry(
+        total=5,
+        connect=5,
+        read=5,
+        status=5,
+        backoff_factor=4,
+        backoff_jitter=1,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=None,
+        respect_retry_after_header=True,
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
     response = session.get(DOWNLOAD_PAGE, timeout=45)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, "html.parser")
