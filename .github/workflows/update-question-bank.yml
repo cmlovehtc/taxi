@@ -20,43 +20,46 @@ jobs:
     timeout-minutes: 45
     env:
       PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PIP_CACHE_DIR: "C:\\actions-runner\\_pip_cache"
     steps:
       - name: 取得網站原始碼
         uses: actions/checkout@v7
         with:
           clean: true
 
-      - name: 設定 Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: tools/requirements.txt
+      - name: 檢查本機 Python
+        shell: cmd
+        run: |
+          "C:\Python312\python.exe" --version
+          if errorlevel 1 exit /b 1
 
-      - name: 安裝題庫處理工具
-        shell: pwsh
-        run: python -m pip install -r tools/requirements.txt
+      - name: 建立獨立環境並安裝題庫工具
+        shell: cmd
+        run: |
+          "C:\Python312\python.exe" -m venv .venv
+          if errorlevel 1 exit /b 1
+          ".venv\Scripts\python.exe" -m pip install -r tools\requirements.txt
+          if errorlevel 1 exit /b 1
 
       - name: 從警政署下載並驗證題庫
-        shell: pwsh
-        run: python tools/update_question_bank.py
+        shell: cmd
+        run: |
+          ".venv\Scripts\python.exe" tools\update_question_bank.py
+          if errorlevel 1 exit /b 1
 
       - name: 提交有變更的題庫
-        shell: pwsh
+        shell: cmd
         run: |
           git diff --quiet
-          $diffStatus = $LASTEXITCODE
-          if ($diffStatus -eq 0) {
-            Write-Host "官方題庫沒有變更"
-            exit 0
-          }
-          if ($diffStatus -ne 1) {
-            throw "無法檢查題庫變更，Git 結束碼：$diffStatus"
-          }
-
-          git config user.name "taxi-question-bank-bot"
-          git config user.email "taxi-question-bank-bot@users.noreply.github.com"
-          git add -- "*.txt" "index.html" "question-bank-manifest.json"
-          git commit -m "自動更新官方題庫"
+          if errorlevel 2 exit /b %ERRORLEVEL%
+          if not errorlevel 1 (
+            echo Official question bank has no changes.
+            exit /b 0
+          )
+          git config user.name "taxi-question-bank-bot" || exit /b 1
+          git config user.email "taxi-question-bank-bot@users.noreply.github.com" || exit /b 1
+          git add -- "*.txt" "index.html" "question-bank-manifest.json" || exit /b 1
+          git commit -m "Auto-update official question bank" || exit /b 1
           git push origin "HEAD:main"
