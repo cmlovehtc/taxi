@@ -230,8 +230,13 @@ def make_session() -> tuple[requests.Session, str, str]:
     return session, str(csrf["content"]), str(csrf_header.get("content") if csrf_header else "X-CSRF-TOKEN")
 
 
-def download_bundle(traffic: list[str], city: str | None = None) -> bytes:
-    session, csrf, csrf_header = make_session()
+def download_bundle(
+    session: requests.Session,
+    csrf: str,
+    csrf_header: str,
+    traffic: list[str],
+    city: str | None = None,
+) -> bytes:
     payload: dict[str, object] = {"traffic": traffic}
     if city:
         payload["city"] = city
@@ -326,8 +331,13 @@ def main() -> int:
         stage = Path(temporary)
         generated: list[Path] = []
 
+        print("Connecting to the official NPA question-bank service…", flush=True)
+        session, csrf, csrf_header = make_session()
+
         print("Downloading national traffic-law question bank…", flush=True)
-        traffic_pdfs = extract_pdfs(download_bundle(["1", "2"]))
+        traffic_pdfs = extract_pdfs(
+            download_bundle(session, csrf, csrf_header, ["1", "2"])
+        )
         for question_type in ("是非題", "選擇題"):
             filename = f"交通法令_{question_type}.txt"
             questions = parse_pdf(select_pdf(traffic_pdfs, question_type), question_type)
@@ -339,7 +349,9 @@ def main() -> int:
 
         for position, (city_name, city_code) in enumerate(CITY_CODES.items(), start=1):
             print(f"[{position:02d}/{len(CITY_CODES)}] Downloading {city_name}…", flush=True)
-            city_pdfs = extract_pdfs(download_bundle(["3", "4"], city_code))
+            city_pdfs = extract_pdfs(
+                download_bundle(session, csrf, csrf_header, ["3", "4"], city_code)
+            )
             for question_type in ("是非題", "選擇題"):
                 filename = f"{city_name}_地理環境_{question_type}.txt"
                 questions = parse_pdf(select_pdf(city_pdfs, question_type), question_type)
