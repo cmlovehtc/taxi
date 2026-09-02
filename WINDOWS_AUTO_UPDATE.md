@@ -4,8 +4,8 @@
 
 ## 最簡單安裝方式（建議）
 
-1. 在 GitHub 開啟 [`點兩下安裝.cmd`](https://github.com/cmlovehtc/taxi/blob/main/%E9%BB%9E%E5%85%A9%E4%B8%8B%E5%AE%89%E8%A3%9D.cmd)，按右上方的 **Download raw file** 下載按鈕。
-2. 在 Windows 的「下載」資料夾找到 `點兩下安裝.cmd`，點兩下執行。
+1. 在 GitHub 開啟 [`INSTALL_TAXI_AUTO_UPDATE.cmd`](https://github.com/cmlovehtc/taxi/blob/main/INSTALL_TAXI_AUTO_UPDATE.cmd)，按右上方的 **Download raw file** 下載按鈕。
+2. 在 Windows 的「下載」資料夾找到 `INSTALL_TAXI_AUTO_UPDATE.cmd`，點兩下執行。
 3. Windows 詢問是否允許變更時按 **是**。
 4. 安裝程式會自動開啟 GitHub Runner 頁面。在 **Configure** 區塊，按複製按鈕，複製包含 `config.cmd` 與 `--token` 的完整那一行。
 5. 回到黑色安裝視窗，按任意鍵。程式會從剪貼簿讀取代碼、自動完成安裝，並在使用後清除剪貼簿。
