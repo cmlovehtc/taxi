@@ -8,14 +8,23 @@ if errorlevel 1 goto request_admin
 goto admin_ok
 
 :request_admin
+if /I "%~1"=="--elevated" goto admin_failed
 echo.
 echo 即將顯示 Windows 權限視窗，請按「是」。
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+set "TAXI_INSTALLER_PATH=%~f0"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $a='/d /c '+$q+$q+$env:TAXI_INSTALLER_PATH+$q+' --elevated'+$q; Start-Process -FilePath $env:ComSpec -ArgumentList $a -WorkingDirectory (Split-Path -Parent $env:TAXI_INSTALLER_PATH) -Verb RunAs"
 if errorlevel 1 (
   echo 無法取得系統管理員權限，安裝已停止。
   pause
 )
 exit /b
+
+:admin_failed
+echo.
+echo Windows 沒有提供系統管理員權限，安裝已停止。
+echo 請保留這個畫面並截圖給我。
+pause
+exit /b 1
 
 :admin_ok
 set "RUNNER_DIR=C:\actions-runner"
