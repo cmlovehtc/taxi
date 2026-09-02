@@ -1,4 +1,4 @@
-name: 自動更新官方題庫
+name: Windows 電腦自動更新官方題庫
 
 on:
   schedule:
@@ -15,11 +15,17 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    if: github.repository == 'cmlovehtc/taxi'
+    runs-on: [self-hosted, windows, x64]
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
     steps:
       - name: 取得網站原始碼
         uses: actions/checkout@v7
+        with:
+          clean: true
 
       - name: 設定 Python
         uses: actions/setup-python@v7
@@ -29,19 +35,28 @@ jobs:
           cache-dependency-path: tools/requirements.txt
 
       - name: 安裝題庫處理工具
-        run: pip install -r tools/requirements.txt
+        shell: pwsh
+        run: python -m pip install -r tools/requirements.txt
 
       - name: 從警政署下載並驗證題庫
+        shell: pwsh
         run: python tools/update_question_bank.py
 
       - name: 提交有變更的題庫
+        shell: pwsh
         run: |
-          if git diff --quiet; then
-            echo "官方題庫沒有變更"
+          git diff --quiet
+          $diffStatus = $LASTEXITCODE
+          if ($diffStatus -eq 0) {
+            Write-Host "官方題庫沒有變更"
             exit 0
-          fi
+          }
+          if ($diffStatus -ne 1) {
+            throw "無法檢查題庫變更，Git 結束碼：$diffStatus"
+          }
+
           git config user.name "taxi-question-bank-bot"
           git config user.email "taxi-question-bank-bot@users.noreply.github.com"
-          git add -- '*.txt' index.html question-bank-manifest.json
+          git add -- "*.txt" "index.html" "question-bank-manifest.json"
           git commit -m "自動更新官方題庫"
-          git push
+          git push origin "HEAD:main"
