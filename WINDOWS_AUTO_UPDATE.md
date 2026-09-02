@@ -22,6 +22,10 @@
 3. 電腦保持開機並連上網路，等待執行完成。
 4. 出現綠色勾勾代表成功；題庫有變更時會自動提交到 `main`，沒有變更時也會正常完成。
 
+### 如果出現 `running scripts is disabled`
+
+這代表 Windows 不允許 `actions/setup-python` 執行安裝腳本。請下載 [`TAXI_FIX_PYTHON.cmd`](https://github.com/cmlovehtc/taxi/blob/main/TAXI_FIX_PYTHON.cmd)，點兩下後在權限詢問按 **是**。看到 `PYTHON REPAIR COMPLETE` 後，回 GitHub 重新執行工作流程。修復檔會安裝經 SHA-256 驗證的 Python 3.12.10；不會永久放寬 PowerShell 執行政策。
+
 ## 平常使用
 
 - Windows 可以鎖定，但不能關機、休眠或斷網。
