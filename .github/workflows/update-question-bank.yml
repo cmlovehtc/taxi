@@ -68,7 +68,10 @@ jobs:
       - name: 提交有變更的題庫
         shell: cmd
         run: |
-          git diff --quiet
+          for %%F in (*.txt) do git add -- "%%F"
+          if errorlevel 1 exit /b 1
+          git add -- "index.html" "question-bank-manifest.json" || exit /b 1
+          git diff --cached --quiet
           if errorlevel 2 exit /b %ERRORLEVEL%
           if not errorlevel 1 (
             echo Official question bank has no changes.
@@ -76,6 +79,5 @@ jobs:
           )
           git config user.name "taxi-question-bank-bot" || exit /b 1
           git config user.email "taxi-question-bank-bot@users.noreply.github.com" || exit /b 1
-          git add -- "*.txt" "index.html" "question-bank-manifest.json" || exit /b 1
           git commit -m "Auto-update official question bank" || exit /b 1
           git push origin "HEAD:main"
