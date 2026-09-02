@@ -75,6 +75,38 @@
       font-size: 14px;
       border-radius: 4px;
     }
+    .version-switcher {
+      max-width: 1000px;
+      margin: 14px auto 28px;
+      padding: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #eef4f9;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .version-switcher a, .version-switcher .current-version {
+      padding: 7px 14px;
+      border: 1px solid #006699;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .version-switcher a {
+      color: #006699;
+      background: #fff;
+    }
+    .version-switcher a:hover {
+      color: #fff;
+      background: #006699;
+    }
+    .version-switcher .current-version {
+      color: #fff;
+      background: #006699;
+    }
 
     /*
      * 首頁與題庫選單
@@ -348,6 +380,12 @@
     </div>
 
   </div> <!-- /.container -->
+
+  <nav class="version-switcher" aria-label="網站版本切換">
+    <strong>版本切換</strong>
+    <span class="current-version" aria-current="page">舊版（目前）</span>
+    <a href="https://taxi-exam-tw.cmlove.chatgpt.site">新版</a>
+  </nav>
 
   <script>
     /*
