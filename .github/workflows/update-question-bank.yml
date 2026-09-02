@@ -5,12 +5,6 @@ on:
     # 每天台灣時間 04:20 檢查一次，避開一般使用尖峰。
     - cron: "20 20 * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/update-question-bank.yml"
-      - "tools/update_question_bank.py"
-      - "tools/requirements.txt"
 
 permissions:
   contents: write
@@ -21,7 +15,7 @@ concurrency:
 
 jobs:
   update:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: 取得網站原始碼
