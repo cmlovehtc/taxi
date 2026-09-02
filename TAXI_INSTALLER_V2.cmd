@@ -2,9 +2,9 @@
 setlocal EnableExtensions DisableDelayedExpansion
 title TAXI AUTO UPDATE INSTALLER V2
 
-set "TAXI_SCRIPT_URL=https://raw.githubusercontent.com/cmlovehtc/taxi/main/tools/install_windows_runner.ps1"
+set "TAXI_SCRIPT_URL=https://raw.githubusercontent.com/cmlovehtc/taxi/main/tools/install_windows_runner_v2.ps1"
 set "TAXI_SCRIPT_PATH=%TEMP%\taxi_install_windows_runner_v2.ps1"
-set "TAXI_SCRIPT_SHA256=F66A592F0CA7EF3645E9B722E74A4C1700E37E6BF195127DD7A5384169FF7BE0"
+set "TAXI_SCRIPT_SHA256=6D177FDF564B000092DBBFB8A7252B52AA63A91FFD46E5ABFA582D183847B34D"
 
 echo ============================================================
 echo  TAXI AUTO UPDATE INSTALLER V2
