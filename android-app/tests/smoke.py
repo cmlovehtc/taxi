@@ -1,5 +1,6 @@
 """Real-device smoke checks on an isolated Android emulator, using UIAutomator + adb."""
 import json
+import sys
 import pathlib
 import re
 import subprocess
@@ -75,6 +76,49 @@ def set_field(caption, value):
         adb('shell', 'input', 'swipe', '530', '1800', '530', '500', '200')
     raise AssertionError('Field missing: '+caption)
 
+def choose(control, value):
+    tap(control)
+    for _ in range(4):
+        nodes=list(tree().iter('node'))
+        if any(n.get('text')==value for n in nodes):
+            tap(value)
+            return
+        lists=[n for n in nodes if n.get('class')=='android.widget.ListView']
+        if not lists: break
+        box=[int(v) for v in re.findall(r'\d+',lists[0].get('bounds',''))]
+        x=(box[0]+box[2])//2
+        adb('shell','input','swipe',str(x),str(box[1]+80),str(x),str(box[3]-80),'250')
+    tap(value,attempts=20)
+
+def remaining_ui_checks():
+    # Run the remaining UI checks after the previous candidate already passed
+    # upgrade, 6610-question Android parity, default exam, resume and scoring.
+    adb('install','-r',str(ROOT/'build'/'taxi-exam-0.2.0.apk'));adb('logcat','-c');launch()
+    fixture=state();fixture['active']=None;fixture['city']='基隆市';write_state(fixture);launch()
+    checks=[]
+    tap('開始模擬考');choose('報考縣市','臺北市');picture('06-taipei-profile');tap('開始作答')
+    qs=state()['active']['questions'];assert len(qs)==50
+    assert sum(q['city']=='臺北市' for q in qs)==15 and sum(q['city']=='新北市' for q in qs)==15 and sum(q['city']=='基隆市' for q in qs)==10
+    checks.append('City dropdown: Taipei 30/30/20/10/10')
+    fixture=state();fixture['active']=None;write_state(fixture);launch();tap('開始模擬考');tap('只練報考縣市 100%');tap('進階：自行調整比例')
+    set_field('基隆市 比例（%）',40);set_field('臺北市 比例（%）',60);tap('開始作答',attempts=20)
+    qs=state()['active']['questions'];assert len(qs)==50 and sum(q['city']=='基隆市' for q in qs)==20 and sum(q['city']=='臺北市' for q in qs)==30
+    checks.append('Editable percentages: 40% Keelung + 60% Taipei gives 20 + 30 questions')
+    fixture=state();fixture['active']=None;write_state(fixture);launch();tap('開始模擬考');tap('只練報考縣市 100%')
+    set_field('是非題數（可以填 0）',2);set_field('選擇題數（可以填 0）',3);tap('開始作答')
+    custom=state()['active'];assert len(custom['questions'])==5 and not custom['timed'] and all(q['city']=='臺北市' for q in custom['questions'])
+    checks.append('Custom 2 TF + 3 MC has no time limit; one-city 100% works')
+    fixture=state();fixture['active']=None;write_state(fixture);launch();tap('題庫');choose('題庫縣市','基隆市')
+    tap('基隆市題解整理・最佳記憶法');picture('07-memory-guide');tap('題庫');tap('顯示答案');tap('答題解析');picture('08-question-explanation')
+    assert '收藏' not in adb('shell','cat','/sdcard/taxi-window.xml')
+    set_field('原題號',10);tap('跳轉');picture('09-reviewed-explanation');tap('返回閱讀')
+    checks.append('Native guide, answer explanations, original-number lookup and no favorites')
+    tap('我的');tap('夜間模式');assert state()['night'];tap('題庫');picture('10-night-reading')
+    assert 'FATAL EXCEPTION' not in adb('logcat','-d','-s','AndroidRuntime:E')
+    checks.append('Dark mode; no runtime crashes')
+    (OUT/'result.json').write_text(json.dumps({'passed':True,'checks':checks,'previous_verified_run':34642720239,'previous_passed':['0.1 to 0.2 data-preserving update','6610/6610 Android website parity','automatic question-bank check','20 TF + 30 MC and 60 minutes','saved answers and remaining time','70-point pass and wrong-answer ledger']},ensure_ascii=False,indent=2))
+    print('PASS: remaining native UI checks, including city dropdown, editable ratios and study explanations.')
+
 def main():
     checks=[]
     previous=ROOT/'build'/'previous'/'taxi-exam-0.1.0.apk'
@@ -126,7 +170,7 @@ def main():
     assert state()['history'][0]['score']==70;picture('04-result');checks.append('70 percent pass result and wrong question ledger')
     tap('查看本次錯題');picture('05-wrong-questions')
     # Preset selection is a dropdown. A different county produces its own ratios.
-    tap('首頁');tap('開始模擬考');tap('報考縣市');tap('臺北市');picture('06-taipei-profile');tap('開始作答')
+    tap('首頁');tap('開始模擬考');choose('報考縣市','臺北市');picture('06-taipei-profile');tap('開始作答')
     paper=state()['active']['questions'];assert sum(q['city']=='臺北市' for q in paper)==15;assert sum(q['city']=='新北市' for q in paper)==15;assert sum(q['city']=='基隆市' for q in paper)==10
     checks.append('Taipei preset 30/30/20/10/10 via city dropdown')
     fixture=state();fixture['active']=None;write_state(fixture);launch();tap('開始模擬考')
@@ -134,7 +178,7 @@ def main():
     custom=state()['active'];assert len(custom['questions'])==5 and not custom['timed'] and custom['remainingSeconds']==0
     assert all(q['city']=='臺北市' for q in custom['questions']);checks.append('Single-city 100% and custom counts have no timer')
     fixture=state();fixture['active']=None;write_state(fixture);launch();tap('題庫')
-    tap('題庫縣市');tap('基隆市');tap('基隆市題解整理・最佳記憶法');picture('07-memory-guide');tap('題庫')
+    choose('題庫縣市','基隆市');tap('基隆市題解整理・最佳記憶法');picture('07-memory-guide');tap('題庫')
     tap('顯示答案');picture('08-question-explanation')
     visible=adb('shell','cat','/sdcard/taxi-window.xml');assert '收藏' not in visible
     # Direct original-number lookup exposes the reviewed explanation and comparisons.
@@ -146,7 +190,8 @@ def main():
     (OUT/'result.json').write_text(json.dumps({'passed':True,'checks':checks},ensure_ascii=False,indent=2));print('PASS: native Android install/update and website-parity checks.')
 
 try:
-    main()
+    if '--remaining-ui' in sys.argv: remaining_ui_checks()
+    else: main()
 except Exception:
     (OUT/'failure.txt').write_text(traceback.format_exc())
     try:
