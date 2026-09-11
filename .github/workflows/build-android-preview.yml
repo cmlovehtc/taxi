@@ -1,0 +1,67 @@
+name: Build Android APK preview
+
+on:
+  push:
+    branches: [codex/android-apk-preview]
+    paths: ['android-app/**', '.github/workflows/build-android-preview.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - name: Preserve test signing identity
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/taxi-preview.keystore
+          key: taxi-android-preview-signing-v1
+      - name: Build native APK and test question logic
+        run: bash android-app/build.sh
+      - name: Save installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: taxi-android-apk
+          path: |
+            android-app/build/taxi-exam-0.1.0.apk
+            android-app/build/*report.txt
+            android-app/build/SHA256SUMS.txt
+          retention-days: 30
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exercise install, quiz, resume and garage
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 android-app/tests/smoke.py
+      - name: Save emulator screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taxi-android-device-check
+          path: android-app/build/device-check/
+          if-no-files-found: ignore
+          retention-days: 30
