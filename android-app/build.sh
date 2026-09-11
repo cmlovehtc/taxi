@@ -25,7 +25,7 @@ javac -encoding UTF-8 -d build/tests src/tw/cmlove/taxiexam/QuizCore.java tests/
 java -cp build/tests CoreTest build/assets/question-bank | tee build/core-test-report.txt
 "$TAXI_TOOLS/aapt2" compile --dir res -o build/resources.zip
 "$TAXI_TOOLS/aapt2" link -o build/unsigned.apk --manifest AndroidManifest.xml -I "$TAXI_ANDROID_JAR" --java build/generated -A build/assets build/resources.zip
-javac -encoding UTF-8 -source 8 -target 8 -bootclasspath "$TAXI_ANDROID_JAR" -d build/classes $(find src build/generated -name '*.java' -print)
+javac -encoding UTF-8 --release 8 -classpath "$TAXI_ANDROID_JAR" -d build/classes $(find src build/generated -name '*.java' -print)
 jar cf build/classes.jar -C build/classes .
 "$TAXI_TOOLS/d8" --lib "$TAXI_ANDROID_JAR" --min-api 26 --output build/dex build/classes.jar
 (cd build/dex && zip -q ../unsigned.apk classes*.dex)

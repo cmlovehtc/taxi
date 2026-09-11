@@ -15,6 +15,7 @@ public final class CoreTest {
         if(five) {
             for(String city:QuizCore.CITIES){List<QuizCore.Question> test=QuizCore.select(all,city,false,true,10,40,new Random(1));check(test.size()==50,"50 questions");long main=test.stream().filter(q->q.city.equals(city)).count();check(main==30,"Main region must be 60%");Set<String> selected=new HashSet<>();for(QuizCore.Question q:test)check(selected.add(q.id),"No repeated questions");}
             check(QuizCore.select(all,"基隆市",false,false,0,5,new Random(3)).size()==5,"A question type may be zero");
+            List<QuizCore.Question> shortTest=QuizCore.select(all,"基隆市",false,true,5,5,new Random(7));for(String city:QuizCore.CITIES)check(shortTest.stream().filter(q->q.city.equals(city)).count()==(city.equals("基隆市")?6:1),"10-question mixed-type test must preserve overall 60/10 distribution");
             try{QuizCore.select(all,"基隆市",false,false,0,0,new Random());throw new AssertionError("Empty exam accepted");}catch(IllegalArgumentException expected){}
             try{QuizCore.select(all,"基隆市",false,false,500,0,new Random());throw new AssertionError("Too many questions accepted");}catch(IllegalArgumentException expected){}
         }

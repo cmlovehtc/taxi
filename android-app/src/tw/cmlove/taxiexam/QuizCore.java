@@ -53,10 +53,12 @@ public final class QuizCore {
     public static List<Question> select(List<Question> all, String city, boolean law, boolean joint, int tfCount, int mcCount, Random random) {
         if(tfCount<0 || mcCount<0 || tfCount+mcCount==0 || tfCount+mcCount>500) throw new IllegalArgumentException("請設定 1～500 題；是非或選擇其中一種可以填 0。");
         List<Question> result=new ArrayList<>();
+        int major=Arrays.asList(CITIES).indexOf(city);int[] totalQuota=null,tfQuota=null;
+        if(!law&&joint){if(major<0)throw new IllegalArgumentException("此地區不適用五縣市配比");totalQuota=quotas(tfCount+mcCount,major);tfQuota=quotas(tfCount,major);}
         for(int type=0;type<2;type++) {
             boolean tf=type==0; int count=tf?tfCount:mcCount;
             if(law || !joint) add(result,all,law?"交通法規":city,tf,count,random);
-            else { int major=Arrays.asList(CITIES).indexOf(city); if(major<0) throw new IllegalArgumentException("此地區不適用五縣市配比"); int[] q=quotas(count,major); for(int i=0;i<5;i++) add(result,all,CITIES[i],tf,q[i],random); }
+            else { for(int i=0;i<5;i++) add(result,all,CITIES[i],tf,tf?tfQuota[i]:totalQuota[i]-tfQuota[i],random); }
         }
         // Keep true/false and multiple choice in separate sections, matching the setup order.
         return result;
