@@ -30,6 +30,7 @@ public final class BankStore {
     }
     public Bank update(Bank current) throws Exception {
         JSONObject manifest=new JSONObject(fetch("question-bank-manifest.json"));
+        if(!java.time.Instant.parse(manifest.getString("updated_at")).isAfter(java.time.Instant.parse(current.date)))return current;
         JSONObject hashes=manifest.getJSONObject("sha256"); JSONObject files=new JSONObject();
         JSONObject existing=current.snapshot.getJSONObject("files");
         Iterator<String> it=hashes.keys(); while(it.hasNext()) {
@@ -58,7 +59,7 @@ public final class BankStore {
         URL url=new URL(BASE+URLEncoder.encode(name,"UTF-8").replace("+","%20"));
         HttpURLConnection connection=(HttpURLConnection)url.openConnection();
         connection.setConnectTimeout(12000);connection.setReadTimeout(20000);connection.setInstanceFollowRedirects(false);
-        connection.setRequestProperty("Cache-Control","no-cache");connection.setRequestProperty("User-Agent","TaxiExamAndroid/0.1");
+        connection.setRequestProperty("Cache-Control","no-cache");connection.setRequestProperty("User-Agent","TaxiExamAndroid/0.2");
         try {if(connection.getResponseCode()!=200)throw new IOException("暫時無法取得題庫（"+connection.getResponseCode()+"）");return read(connection.getInputStream(),2*1024*1024);}finally{connection.disconnect();}
     }
     public static String read(InputStream input,int max) throws IOException {

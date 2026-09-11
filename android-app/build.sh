@@ -21,8 +21,9 @@ for name, expected in manifest['sha256'].items():
     shutil.copyfile(path, pathlib.Path('build/assets/question-bank')/name)
 print(f'Bundling {manifest["files"]} verified files, {manifest["questions"]} questions.')
 PY
-javac -encoding UTF-8 -d build/tests src/tw/cmlove/taxiexam/QuizCore.java tests/CoreTest.java
+javac -encoding UTF-8 -d build/tests src/tw/cmlove/taxiexam/QuizCore.java src/tw/cmlove/taxiexam/ExamProfiles.java tests/CoreTest.java
 java -cp build/tests CoreTest build/assets/question-bank | tee build/core-test-report.txt
+cp assets/*.json build/assets/
 "$TAXI_TOOLS/aapt2" compile --dir res -o build/resources.zip
 "$TAXI_TOOLS/aapt2" link -o build/unsigned.apk --manifest AndroidManifest.xml -I "$TAXI_ANDROID_JAR" --java build/generated -A build/assets build/resources.zip
 javac -encoding UTF-8 --release 8 -classpath "$TAXI_ANDROID_JAR" -d build/classes $(find src build/generated -name '*.java' -print)
@@ -35,8 +36,13 @@ mkdir -p "$(dirname "$TAXI_TEST_KEY")"
 if [[ ! -f "$TAXI_TEST_KEY" ]]; then
   keytool -genkeypair -noprompt -keystore "$TAXI_TEST_KEY" -storepass android -keypass android -alias androiddebugkey -dname 'CN=Taxi Exam Preview,O=Android,C=TW' -keyalg RSA -keysize 2048 -validity 10000
 fi
-"$TAXI_TOOLS/apksigner" sign --ks "$TAXI_TEST_KEY" --ks-pass pass:android --key-pass pass:android --out build/taxi-exam-0.1.0.apk build/aligned.apk
-"$TAXI_TOOLS/apksigner" verify --verbose --print-certs build/taxi-exam-0.1.0.apk | tee build/signature-report.txt
-"$TAXI_TOOLS/aapt" dump badging build/taxi-exam-0.1.0.apk > build/package-report.txt
-sha256sum build/taxi-exam-0.1.0.apk > build/SHA256SUMS.txt
-echo 'Created android-app/build/taxi-exam-0.1.0.apk'
+"$TAXI_TOOLS/apksigner" sign --ks "$TAXI_TEST_KEY" --ks-pass pass:android --key-pass pass:android --out build/taxi-exam-0.2.0.apk build/aligned.apk
+"$TAXI_TOOLS/apksigner" verify --verbose --print-certs build/taxi-exam-0.2.0.apk | tee build/signature-report.txt
+"$TAXI_TOOLS/aapt" dump badging build/taxi-exam-0.2.0.apk > build/package-report.txt
+sha256sum build/taxi-exam-0.2.0.apk > build/SHA256SUMS.txt
+python3 - <<'PY_CHECK'
+from pathlib import Path
+report=Path('build/signature-report.txt').read_text()
+assert 'bf314dd271366256725c0b6372307937a97257896ab1a10498e81abb693612db' in report, 'Signing identity changed; cannot update the original APK'
+PY_CHECK
+echo 'Created android-app/build/taxi-exam-0.2.0.apk'

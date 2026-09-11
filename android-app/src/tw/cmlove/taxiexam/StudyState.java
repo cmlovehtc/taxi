@@ -50,7 +50,7 @@ public final class StudyState {
     public static JSONObject qJson(QuizCore.Question q)throws Exception {return new JSONObject().put("id",q.id).put("file",q.file).put("city",q.city).put("text",q.text).put("tf",q.tf).put("number",q.number).put("answer",q.answer).put("choices",q.choices);}
     public static QuizCore.Question readQuestion(JSONObject q)throws Exception {
         int choices=q.getInt("choices"), answer=q.getInt("answer");boolean tf=q.getBoolean("tf");
-        if(choices<2||choices>4||answer<0||answer>=choices||(tf&&choices!=2))throw new IOException("不正確的題目資料");
+        if(choices<2||choices>9||answer<0||answer>=choices||(tf&&choices!=2))throw new IOException("不正確的題目資料");
         return new QuizCore.Question(q.getString("id"),q.getString("file"),q.getString("city"),q.getString("text"),tf,q.getInt("number"),answer,choices);
     }
     public static final class Session {
@@ -59,14 +59,15 @@ public final class StudyState {
         public final int[] answers;
         public final boolean exam;
         public final long started,deadline;
+        public final boolean timed; public int remainingSeconds;
         public int index;
-        public Session(List<QuizCore.Question> q,boolean exam,int minutes,String title) {id=UUID.randomUUID().toString();this.title=title;questions=new ArrayList<>(q);answers=new int[q.size()];Arrays.fill(answers,-1);this.exam=exam;started=System.currentTimeMillis();deadline=exam?started+minutes*60000L:0;}
+        public Session(List<QuizCore.Question> q,boolean exam,int minutes,String title) {id=UUID.randomUUID().toString();this.title=title;questions=new ArrayList<>(q);answers=new int[q.size()];Arrays.fill(answers,-1);this.exam=exam;started=System.currentTimeMillis();deadline=minutes>0?started+minutes*60000L:0;timed=minutes>0;remainingSeconds=minutes*60;}
         Session(JSONObject s)throws Exception {
-            id=s.getString("id");title=s.getString("title");exam=s.getBoolean("exam");started=s.getLong("started");deadline=s.getLong("deadline");
-            JSONArray q=s.getJSONArray("questions"),a=s.getJSONArray("answers");if(q.length()<1||q.length()>500||a.length()!=q.length())throw new IOException("測驗紀錄不完整");
+            id=s.getString("id");title=s.getString("title");exam=s.getBoolean("exam");started=s.getLong("started");deadline=s.getLong("deadline");timed=s.optBoolean("timed",exam&&deadline>0);remainingSeconds=s.has("remainingSeconds")?Math.max(0,s.getInt("remainingSeconds")):(timed?(int)Math.max(0,(deadline-System.currentTimeMillis())/1000):0);
+            JSONArray q=s.getJSONArray("questions"),a=s.getJSONArray("answers");if(q.length()<1||q.length()>20000||a.length()!=q.length())throw new IOException("測驗紀錄不完整");
             questions=new ArrayList<>();answers=new int[q.length()];for(int i=0;i<q.length();i++){questions.add(readQuestion(q.getJSONObject(i)));answers[i]=a.getInt(i);if(answers[i]<-1||answers[i]>=questions.get(i).choices)throw new IOException("作答紀錄不完整");}
             index=Math.max(0,Math.min(s.optInt("index"),q.length()-1));
         }
-        JSONObject toJson()throws Exception {JSONArray q=new JSONArray(),a=new JSONArray();for(QuizCore.Question item:questions)q.put(qJson(item));for(int answer:answers)a.put(answer);return new JSONObject().put("id",id).put("title",title).put("exam",exam).put("started",started).put("deadline",deadline).put("index",index).put("questions",q).put("answers",a);}
+        JSONObject toJson()throws Exception {JSONArray q=new JSONArray(),a=new JSONArray();for(QuizCore.Question item:questions)q.put(qJson(item));for(int answer:answers)a.put(answer);return new JSONObject().put("id",id).put("title",title).put("exam",exam).put("started",started).put("deadline",deadline).put("timed",timed).put("remainingSeconds",remainingSeconds).put("index",index).put("questions",q).put("answers",a);}
     }
 }
