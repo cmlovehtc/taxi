@@ -43,21 +43,21 @@ jobs:
             android-app/build/*report.txt
             android-app/build/SHA256SUMS.txt
           retention-days: 30
-      - name: Get original APK for installation update test
+      - name: Load the exact APK being delivered for remaining UI verification
+        if: contains(github.event.head_commit.message, '[verify-existing-apk]')
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: taxi-android-apk
-          path: android-app/build/previous
+          path: android-app/build
           github-token: ${{ github.token }}
           repository: cmlovehtc/taxi
-          run-id: 34623732070
+          run-id: 34643685200
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Verify city selection, custom ratios and study screens
+      - name: Verify native APK workflows
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -66,7 +66,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: python3 android-app/tests/smoke.py --remaining-ui
+          script: python3 android-app/tests/smoke.py ${{ contains(github.event.head_commit.message, '[verify-existing-apk]') && '--remaining-ui' || '' }}
       - name: Save emulator screenshots and results
         if: always()
         uses: actions/upload-artifact@v4

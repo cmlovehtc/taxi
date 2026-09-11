@@ -1,5 +1,6 @@
 """Real-device smoke checks on an isolated Android emulator, using UIAutomator + adb."""
 import json
+import hashlib
 import sys
 import pathlib
 import re
@@ -46,7 +47,7 @@ def tap(caption, attempts=7):
                     adb('shell', 'input', 'tap', str((box[0]+box[2])//2), str((box[1]+box[3])//2))
                     time.sleep(.35)
                     return
-        adb('shell', 'input', 'swipe', '530', '1900', '530', '500', '250')
+        adb('shell', 'input', 'swipe', '530', '1650', '530', '1150', '650')
         time.sleep(.3)
     raise AssertionError('Visible action not found: ' + caption)
 
@@ -62,7 +63,7 @@ def write_state(fixture):
 
 def set_field(caption, value):
     for _ in range(3): adb('shell','input','swipe','530','450','530','1850','180')
-    for _ in range(16):
+    for _ in range(30):
         for n in tree().iter('node'):
             if n.get('class') == 'android.widget.EditText' and n.get('content-desc') == caption:
                 box = [int(v) for v in re.findall(r'\d+', n.get('bounds', ''))]
@@ -73,7 +74,7 @@ def set_field(caption, value):
                     adb('shell', 'input', 'text', str(value))
                     adb('shell', 'input', 'keyevent', '4')
                     return
-        adb('shell', 'input', 'swipe', '530', '1800', '530', '500', '200')
+        adb('shell', 'input', 'swipe', '530', '1650', '530', '1150', '650')
     raise AssertionError('Field missing: '+caption)
 
 def choose(control, value):
@@ -95,6 +96,8 @@ def remaining_ui_checks():
     # upgrade, 6610-question Android parity, default exam, resume and scoring.
     adb('install','-r',str(ROOT/'build'/'taxi-exam-0.2.0.apk'));adb('logcat','-c');launch()
     fixture=state();fixture['active']=None;fixture['city']='基隆市';write_state(fixture);launch()
+    delivered_sha=hashlib.sha256((ROOT/'build'/'taxi-exam-0.2.0.apk').read_bytes()).hexdigest()
+    assert delivered_sha=='f074bb368f097cb69272b227ed183eeb1447b8f6e190be60235158e58cc2e8ed'
     checks=[]
     tap('開始模擬考');choose('報考縣市','臺北市');picture('06-taipei-profile');tap('開始作答')
     qs=state()['active']['questions'];assert len(qs)==50
@@ -116,7 +119,7 @@ def remaining_ui_checks():
     tap('我的');tap('夜間模式');assert state()['night'];tap('題庫');picture('10-night-reading')
     assert 'FATAL EXCEPTION' not in adb('logcat','-d','-s','AndroidRuntime:E')
     checks.append('Dark mode; no runtime crashes')
-    (OUT/'result.json').write_text(json.dumps({'passed':True,'checks':checks,'previous_verified_run':34642720239,'previous_passed':['0.1 to 0.2 data-preserving update','6610/6610 Android website parity','automatic question-bank check','20 TF + 30 MC and 60 minutes','saved answers and remaining time','70-point pass and wrong-answer ledger']},ensure_ascii=False,indent=2))
+    (OUT/'result.json').write_text(json.dumps({'passed':True,'apk_sha256':delivered_sha,'checks':checks,'previous_verified_run':34642720239,'previous_passed':['0.1 to 0.2 data-preserving update','6610/6610 Android website parity','automatic question-bank check','20 TF + 30 MC and 60 minutes','saved answers and remaining time','70-point pass and wrong-answer ledger']},ensure_ascii=False,indent=2))
     print('PASS: remaining native UI checks, including city dropdown, editable ratios and study explanations.')
 
 def main():
