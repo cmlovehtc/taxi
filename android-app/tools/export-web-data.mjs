@@ -24,6 +24,8 @@ for(const match of tsx.matchAll(/<AccordionItem value="([^"]+)">([\s\S]*?)<\/Acc
  const b=match[2],title=clean(b.match(/<AccordionTrigger[^>]*>([\s\S]*?)<\/AccordionTrigger>/)[1]);const blocks=[];
  const pattern=/<MemoryTable headers=\{(\[[^}]*\])\} rows=\{(\w+)\} \/>|<(MemoryCue|h5|p|li)(?:\s[^>]*?)?>([\s\S]*?)<\/\3>|\{(TURN_RULES|XIN_TWO_CLUSTER|NUMBER_CARDS)\.map/g;
  for(const m of b.matchAll(pattern)){if(m[1])blocks.push({headers:Function('return '+m[1])(),rows:constants[m[2]]});else if(m[5])blocks.push({rows:constants[m[5]].map(v=>Array.isArray(v)?v:[v])});else {const text=clean(m[4]);if(text&&!text.includes('{'))blocks.push({text,bold:m[3]==='MemoryCue'||m[3]==='h5'});}}
+ for(const m of b.matchAll(/\{(\[[\s\S]*?\])\.map\(\(\[step, title, description\]\)/g))blocks.unshift({rows:Function('total','return '+m[1])(bundle.bank['基隆市'].是非題.length+bundle.bank['基隆市'].選擇題.length)});
+ for(const m of b.matchAll(/<span><strong[^>]*>判定是否真的記住：[\s\S]*?<\/span>/g))blocks.push({text:clean(m[0]),bold:true});
  guides['基隆市'].sections.push({title,blocks});
 }
 const data={schema:1,site:'https://taxi-exam-tw.cmlove.chatgpt.site/',sourceCommit:'88cbb0e9c0a290f5f889a173335047556c2d5b98',sourceVersion:71,manifest:bundle.manifest,regions:qb.REGIONS,registrationRegions:[...prof.NORTHERN_REGISTRATION_REGIONS,...prof.OTHER_REGISTRATION_REGIONS],profiles:prof.EXAM_REGION_PROFILES,guides,trafficCategories:traffic.TRAFFIC_LAW_CATEGORIES,trafficKeywords:traffic.CATEGORY_KEYWORDS,trafficPriority:traffic.CATEGORY_PRIORITY,reviewed:JSON.parse(fs.readFileSync(path.join(web,'lib/reviewed-question-notes.json')))};

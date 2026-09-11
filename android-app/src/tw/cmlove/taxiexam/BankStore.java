@@ -30,7 +30,7 @@ public final class BankStore {
     }
     public Bank update(Bank current) throws Exception {
         JSONObject manifest=new JSONObject(fetch("question-bank-manifest.json"));
-        if(!java.time.Instant.parse(manifest.getString("updated_at")).isAfter(java.time.Instant.parse(current.date)))return current;
+        if(!QuizCore.isNewerBankVersion(current.date,manifest.getString("updated_at")))return current;
         JSONObject hashes=manifest.getJSONObject("sha256"); JSONObject files=new JSONObject();
         JSONObject existing=current.snapshot.getJSONObject("files");
         Iterator<String> it=hashes.keys(); while(it.hasNext()) {
@@ -49,9 +49,10 @@ public final class BankStore {
         List<QuizCore.Question> questions=new ArrayList<>();
         for(String name:names) {validateName(name);String raw=files.getString(name);if(!QuizCore.sha256(raw.getBytes(StandardCharsets.UTF_8)).equalsIgnoreCase(hashes.getString(name)))throw new IOException("題庫校驗失敗："+name);questions.addAll(QuizCore.parse(name,raw));}
         if(questions.size()!=manifest.getInt("questions"))throw new IOException("題目數量不符，保留原題庫");
-        for(String city:QuizCore.CITIES) for(boolean tf:new boolean[]{true,false}) {boolean found=false;for(QuizCore.Question q:questions)if(q.city.equals(city)&&q.tf==tf){found=true;break;}if(!found)throw new IOException("缺少 "+city+" 題庫");}
+        for(String city:allRequiredRegions()) for(boolean tf:new boolean[]{true,false}) {boolean found=false;for(QuizCore.Question q:questions)if(q.city.equals(city)&&q.tf==tf){found=true;break;}if(!found)throw new IOException("缺少 "+city+" 題庫");}
         return new Bank(questions,data,manifest.getString("updated_at"));
     }
+    private static List<String> allRequiredRegions(){List<String> r=new ArrayList<>(Arrays.asList(ExamProfiles.REGIONS));r.add("交通法規");return r;}
     private static void validateName(String name) throws IOException {
         if(!name.matches("(?:交通法令|[\\u4e00-\\u9fff]+_地理環境)_(?:是非題|選擇題)\\.txt"))throw new IOException("題庫檔名不符");
     }

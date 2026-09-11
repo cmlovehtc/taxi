@@ -15,7 +15,7 @@ public final class QuizCore {
         public final List<String> options;
         public Question(String id,String file,String city,String text,boolean tf,int number,int answer,int choices) {
             this.id=id;this.file=file;this.city=city;this.text=text;this.tf=tf;this.number=number;this.answer=answer;this.choices=choices;
-            List<String> values=new ArrayList<>();Map<Integer,String> optionMap=new TreeMap<>();String body=text.replaceAll("\\((\\d+)\\)\\)+","($1)");String question=text;
+            String visible=text.split("答案\\s*[:：]",2)[0].trim();List<String> values=new ArrayList<>();Map<Integer,String> optionMap=new TreeMap<>();String body=visible.replaceAll("\\((\\d+)\\)\\)+","($1)");String question=visible;
             if(!tf){Matcher m=Pattern.compile("\\((\\d+)\\)([^()]*)").matcher(body);boolean first=true;while(m.find()){if(first){question=body.substring(0,m.start()).trim();first=false;}optionMap.put(Integer.parseInt(m.group(1)),m.group(2).replaceAll("[。．]+$", "").trim());}}
             values.addAll(optionMap.values());stem=question;options=Collections.unmodifiableList(values);
         }
@@ -40,11 +40,11 @@ public final class QuizCore {
         for(String raw:source.replace("\ufeff","").split("\\r?\\n")){
             String line=raw.trim();if(line.isEmpty())continue;Matcher m=ending.matcher(line);
             if(!m.matches())throw new IllegalArgumentException(file+" 第 "+(list.size()+1)+" 題答案格式不符");
-            String body=m.group(1).trim(),a=m.group(2);int answer,choices;
+            String body=m.group(1).trim(),a=m.group(2),identityAnswer=a;Matcher firstAnswer=Pattern.compile("答案\\s*[:：]\\s*([是否OXＯＸ○×1-9])",Pattern.CASE_INSENSITIVE).matcher(line);if(firstAnswer.find())a=firstAnswer.group(1);int answer,choices;
             if(tf){if("是OoＯ○".contains(a)){answer=0;a="是";}else if("否XxＸ×".contains(a)){answer=1;a="否";}else throw new IllegalArgumentException("是非題答案錯誤");choices=2;}
             else{answer=Integer.parseInt(a)-1;Matcher om=Pattern.compile("\\(([1-9])\\)").matcher(body);Set<Integer> found=new HashSet<>();while(om.find())found.add(Integer.parseInt(om.group(1)));choices=found.size();if(choices<2||choices>9||!found.contains(answer+1))throw new IllegalArgumentException(file+" 選項不完整");for(int n=1;n<=choices;n++)if(!found.contains(n))throw new IllegalArgumentException("選項編號不連續");}
             // Keep v0.1 content identities so existing progress survives installation updates.
-            String hash=sha256((file+"\n"+body+"\n"+a).getBytes(StandardCharsets.UTF_8));int occurrence=occurrences.getOrDefault(hash,0);occurrences.put(hash,occurrence+1);
+            String hash=sha256((file+"\n"+body+"\n"+identityAnswer).getBytes(StandardCharsets.UTF_8));int occurrence=occurrences.getOrDefault(hash,0);occurrences.put(hash,occurrence+1);
             list.add(new Question(hash+":"+occurrence,file,city,body,tf,list.size()+1,answer,choices));
         }
         if(list.isEmpty())throw new IllegalArgumentException("空白題庫："+file);return list;
@@ -64,6 +64,7 @@ public final class QuizCore {
         }
         return result;
     }
+    public static boolean isNewerBankVersion(String current,String candidate){try{return java.time.Instant.parse(candidate).isAfter(java.time.Instant.parse(current));}catch(Exception e){return false;}}
     public static int timeLimitSeconds(boolean mistakes,int tf,int mc){return !mistakes&&tf==20&&mc==30?3600:0;}
     public static int nextUnanswered(int[] answers,int start){return nextUnanswered(answers,start,1);}
     public static int nextUnanswered(int[] answers,int start,int direction){for(int n=1;n<answers.length;n++){int i=(start+direction*n+answers.length)%answers.length;if(answers[i]<0)return i;}return -1;}

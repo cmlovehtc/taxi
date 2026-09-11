@@ -60,6 +60,7 @@ def write_state(fixture):
     adb('shell', 'run-as', PACKAGE, 'sh', '-c', '"cat > files/study-state.json"', input=json.dumps(fixture).encode())
 
 def set_field(caption, value):
+    for _ in range(3): adb('shell','input','swipe','530','450','530','1850','180')
     for _ in range(16):
         for n in tree().iter('node'):
             if n.get('class') == 'android.widget.EditText' and n.get('content-desc') == caption:
@@ -101,6 +102,11 @@ def main():
     assert parity.get('passed') and parity.get('checked')==6610,parity
     checks.append('6610/6610 website question, option, topic, explanation, evidence and related-question parity')
     adb('shell','am','force-stop',PACKAGE);launch();tap('首頁');picture('01-home')
+    for _ in range(30):
+        if state().get('lastCheckSucceeded'): break
+        time.sleep(1)
+    assert state().get('lastCheckSucceeded'), 'Opening the app must check the official bank automatically'
+    checks.append('Automatic bank check on open; unchanged content version reports current official bank')
     # Standard geography exam: 20 TF + 30 MC, sixty minutes, real preset.
     tap('開始模擬考');picture('02-keelung-setup');tap('開始作答')
     current=state()['active'];questions=current['questions'];assert len(questions)==50
@@ -128,7 +134,7 @@ def main():
     custom=state()['active'];assert len(custom['questions'])==5 and not custom['timed'] and custom['remainingSeconds']==0
     assert all(q['city']=='臺北市' for q in custom['questions']);checks.append('Single-city 100% and custom counts have no timer')
     fixture=state();fixture['active']=None;write_state(fixture);launch();tap('題庫')
-    tap('題庫縣市');tap('基隆市');tap('基隆市題解整理・最佳記憶法');picture('07-memory-guide');tap('返回題庫')
+    tap('題庫縣市');tap('基隆市');tap('基隆市題解整理・最佳記憶法');picture('07-memory-guide');tap('題庫')
     tap('顯示答案');picture('08-question-explanation')
     visible=adb('shell','cat','/sdcard/taxi-window.xml');assert '收藏' not in visible
     # Direct original-number lookup exposes the reviewed explanation and comparisons.

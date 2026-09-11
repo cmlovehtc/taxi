@@ -20,6 +20,7 @@ public final class CoreTest {
         check(QuizCore.nextUnanswered(new int[]{0,-1,2,-1},3)==1,"Wrap skips answered");check(QuizCore.nextUnanswered(new int[]{0,-1,2,-1},1,-1)==3,"Previous wraps skipping answered");check(QuizCore.nextUnanswered(new int[]{0,1,-1},2)==-1,"Exclude current question");check(QuizCore.nextUnanswered(new int[]{0,1,2},2)==-1,"All answered");
         String before="第一題。答案:是\n第二題。答案:否\n";check(QuizCore.parse("基隆市_地理環境_是非題.txt",before).get(0).id.equals(QuizCore.parse("基隆市_地理環境_是非題.txt","新增題。答案:否\n"+before).get(1).id),"Stable progress when questions inserted");
         List<QuizCore.Question> paper=all.subList(0,50);int[] answers=new int[50];Arrays.fill(answers,-1);for(int i=0;i<35;i++)answers[i]=paper.get(i).answer;check(QuizCore.score(paper,answers)==70,"35/50 = pass 70");
+        String date="2026-09-02T18:40:20Z";check(!QuizCore.isNewerBankVersion(date,date),"Repeated official checks do not change bank content");check(QuizCore.isNewerBankVersion(date,"2026-09-11T18:40:20Z"),"Changed content version updates");check(!QuizCore.isNewerBankVersion(date,"2026-08-01T00:00:00Z"),"Never downgrade bank");check(!QuizCore.isNewerBankVersion(date,"invalid"),"Ignore invalid content date");
         System.out.println("PASS: 6610 questions, 22 canonical profiles, 20/30 order, 60 minute rule, custom ratios, depleted-region fallback, stable IDs and navigation.");
     }
 }
