@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-02T18:40:20Z",
+  "updated_at": "2026-09-22T23:03:18Z",
   "source": "內政部警政署計程車駕駛人服務網",
   "source_url": "https://tx3.npa.gov.tw/NM112-512WebE/download",
   "files": 46,
@@ -32,7 +32,7 @@
     "桃園市_地理環境_是非題.txt": "86a903b4cbe74e8b6b7b22ee422ae470b5fe1becddd4d863d90af8d1412795fe",
     "桃園市_地理環境_選擇題.txt": "4e20340a40e0e04ade2be61e0775696eb99da014a7ca9d0473efa4b8a390c529",
     "澎湖縣_地理環境_是非題.txt": "d6490e246c78de1f4c02312cda13adb629703bafc0f6bb450027420ad1c2bbe0",
-    "澎湖縣_地理環境_選擇題.txt": "780f6db6afda75914810b4e2358909560e32a326a2d39315924512b700c16d32",
+    "澎湖縣_地理環境_選擇題.txt": "314e8b223fbbadaa62bc1c3ea8b275434ac7d0d08424fd78d6d26e44216545a3",
     "臺中市_地理環境_是非題.txt": "f9d5576b4eb8e3d17e08b8e2042e9ef04047cc6adeaddc5af022dc6c0ce91323",
     "臺中市_地理環境_選擇題.txt": "f050f71f1b18aaddfc596033c600a984e34dd76b53fb390164c8eb5e66c92392",
     "臺北市_地理環境_是非題.txt": "5e21640cc3fe7d3a9031455248b651993479268da2a5cdc8282aec643e7307cf",
