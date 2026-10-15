@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-08T00:17:22Z",
+  "updated_at": "2026-10-15T23:08:24Z",
   "source": "內政部警政署計程車駕駛人服務網",
   "source_url": "https://tx3.npa.gov.tw/NM112-512WebE/download",
   "files": 46,
-  "questions": 6609,
+  "questions": 6613,
   "status": "official-auto-sync",
   "sha256": {
     "交通法令_是非題.txt": "6c645a53e35a9053f9dddfbf5015c8614baea8d5dc5b0b5e533e3203641c1c2a",
@@ -19,8 +19,8 @@
     "基隆市_地理環境_選擇題.txt": "02d2f1a831be4b89cfb4bf62544b342eca54a8afabb9f5a5150ced9992996c54",
     "宜蘭縣_地理環境_是非題.txt": "75baad96d9aa21daf82a5ab51e9cc936768303b695cfdf86f16114340ae710d8",
     "宜蘭縣_地理環境_選擇題.txt": "44b44dbc39087fa4f08ece091353f891a65dafc7ac914cbcffdae6f4566996fb",
-    "屏東縣_地理環境_是非題.txt": "032941bf37fd46e215eefd1325d4da1e24085caca27f09426db337e65e297fc7",
-    "屏東縣_地理環境_選擇題.txt": "71e061f74af57ffe7ef9f93d1e07e1274d611184f857bb53fbb0016738513f69",
+    "屏東縣_地理環境_是非題.txt": "bcf4e215c0c4edeee28833d82ba817275c5011aff3040fbdbc49350ae5219258",
+    "屏東縣_地理環境_選擇題.txt": "656a53c3c706a470d74df7cd36c5a7e12d2a580c770cf83cc1dd1c0c9efc4569",
     "彰化縣_地理環境_是非題.txt": "593f2755a2580b991af7c33b33127ca5905a1b834a3bef83ffc9726111d64358",
     "彰化縣_地理環境_選擇題.txt": "86b799b624b62473243b3e7ffb7c13f2d3647501983b87e2f692ebafec331801",
     "新北市_地理環境_是非題.txt": "0f74aaefca91ea595e637f4ee7ce8571c410d0a0424ed41c1a570e3c95a69367",
