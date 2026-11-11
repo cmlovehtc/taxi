@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10T02:49:27Z",
+  "updated_at": "2026-11-11T00:44:20Z",
   "source": "內政部警政署計程車駕駛人服務網",
   "source_url": "https://tx3.npa.gov.tw/NM112-512WebE/download",
   "files": 46,
-  "questions": 6632,
+  "questions": 6627,
   "status": "official-auto-sync",
   "sha256": {
     "交通法令_是非題.txt": "cbe2e515aa559c76df1a3d01556635288f97d0cb10a4ca799bbc0cb83df11c27",
-    "交通法令_選擇題.txt": "1741779862bda694bdaabaf7fe569e1ae785a45d89ec70ef315409e37a31700d",
+    "交通法令_選擇題.txt": "40d166c4577547b9d09f69e4834c4092ea35688d9f81a5b5859ef7dea14bafe8",
     "南投縣_地理環境_是非題.txt": "32380d68006874cf423b6168b5ba94963a4710b2fa6d97d053fe3014ea2d9ab9",
     "南投縣_地理環境_選擇題.txt": "16a33c1b7bf5c26024bcda42d09e769d29bf7af2f30be1ef7b1d0d319ef95d6d",
     "嘉義市_地理環境_是非題.txt": "48cd143b29cc5101b31c0ac91e7d13bc6c8c3b7f79cfcbb28be95669af387348",
